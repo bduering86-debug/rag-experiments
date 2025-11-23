@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environment
+lcenv/
+*.venv/
+venv/
+
+# Environment files
+.env
+
+# Data files (sensitive or large)
+data/*.csv
+
+# Qdrant persistent storage
+qdrant_data/
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
