@@ -35,7 +35,7 @@ class DataConfig:
 
     @property
     def incident_path(self):
-        # Falls absolute Pfade angegeben wurden → direkt nutzen
+        # Falls absolute Pfade angegeben wurden, diese direkt nutzen
         if self.incident_csv.startswith("/"):
             return self.incident_csv
         return os.path.join(self.data_dir, self.incident_csv)

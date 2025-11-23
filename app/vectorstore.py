@@ -2,15 +2,13 @@ from typing import Literal
 from langchain_qdrant import Qdrant
 from qdrant_client import QdrantClient
 from langchain_core.documents import Document
-
 from .config import QdrantConfig, EmbeddingConfig
-from .embeddings import TEIEmbeddings
-
+from .embeddings import Embeddings
 
 def get_vectorstore(kind: Literal["incidents", "kb"]) -> Qdrant:
     cfg = QdrantConfig()
     emb_cfg = EmbeddingConfig()
-    embeddings = TEIEmbeddings(emb_cfg)
+    embeddings = Embeddings(emb_cfg)
 
     if kind == "incidents":
         collection = cfg.inc_collection
@@ -26,7 +24,6 @@ def get_vectorstore(kind: Literal["incidents", "kb"]) -> Qdrant:
     )
 
     return vs
-
 
 def index_documents(
     docs: list[Document],

@@ -4,12 +4,12 @@ from langchain_core.embeddings import Embeddings
 from .config import EmbeddingConfig
 
 
-class TEIEmbeddings(Embeddings):
+class Embeddings(Embeddings):
     """
-    Embedding-Wrapper für einen OpenAI-kompatiblen TEI-Endpoint.
+    Embedding-Wrapper.
     Nutzt /v1/embeddings mit Key 'input' und 'model'.
     """
-
+s
     def __init__(self, config: EmbeddingConfig | None = None):
         self.config = config or EmbeddingConfig()
 

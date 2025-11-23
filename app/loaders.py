@@ -9,18 +9,21 @@ def load_incidents_csv(path: str) -> List[Document]:
     docs: List[Document] = []
 
     for _, row in df.iterrows():
+
+        # Felder aus CSV lesen und Variablen zuweisen
         ticket_id = str(row.get("ticket_id", ""))
         title = str(row.get("title", ""))
         desc = str(row.get("description", ""))
         history = str(row.get("history", ""))
 
-        # Was das LLM später sehen soll:
+        # Kontext dür LM:
         content = (
             f"Incident {ticket_id}: {title}\n\n"
             f"Beschreibung:\n{desc}\n\n"
             f"Verlauf:\n{history}"
         )
 
+        # Metadten zusammnenstellen'
         metadata = {
             "source": "incident",
             "ticket_id": ticket_id,
@@ -32,6 +35,7 @@ def load_incidents_csv(path: str) -> List[Document]:
             "resolved_at": row.get("resolved_at", ""),
         }
 
+        # Dokument zusammenstellen und zur Liste hinzufügen
         docs.append(Document(page_content=content, metadata=metadata))
 
     return docs
