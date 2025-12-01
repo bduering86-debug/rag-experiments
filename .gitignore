@@ -13,6 +13,8 @@ venv/
 
 # Data files (sensitive or large)
 data/*.csv
+output/*.csv
+output/*.txt
 
 # Qdrant persistent storage
 qdrant_data/
