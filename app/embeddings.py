@@ -1,7 +1,7 @@
 from typing import List
 import requests
 from langchain_core.embeddings import Embeddings
-from .config import EmbeddingConfig
+from bin.config import EmbeddingConfig
 
 
 class Embeddings(Embeddings):

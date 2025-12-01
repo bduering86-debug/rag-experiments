@@ -2,7 +2,7 @@ from typing import Literal
 from langchain_qdrant import Qdrant
 from qdrant_client import QdrantClient
 from langchain_core.documents import Document
-from .config import QdrantConfig, EmbeddingConfig
+from bin.config import QdrantConfig, EmbeddingConfig
 from .embeddings import Embeddings
 
 def get_vectorstore(kind: Literal["incidents", "kb"]) -> Qdrant:

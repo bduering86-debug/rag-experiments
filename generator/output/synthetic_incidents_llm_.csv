@@ -1,0 +1,1 @@
+ticket_id,title,description,created_at,impact,urgency,priority_level,priority,status,category,service,category_path,ci_id,os,hostname,reporter,assigned_group,assignee,site,conversation_history,comments_count,error_code,gold_kb_id,gold_resolution,issue_type,ticket_fulltext

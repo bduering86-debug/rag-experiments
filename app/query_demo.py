@@ -1,7 +1,7 @@
 import os, textwrap, requests
 from langchain_core.documents import Document
 from .vectorstore import get_vectorstore
-from .config import OllamaConfig
+from bin.config import OllamaConfig
 
 ollama_cfg = OllamaConfig()
 

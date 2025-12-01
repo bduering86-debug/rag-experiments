@@ -1,6 +1,6 @@
 from .loaders import load_kb_csv
 from .vectorstore import index_documents
-from .config import DataConfig
+from bin.config import DataConfig
 
 
 def main():
