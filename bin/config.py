@@ -66,11 +66,10 @@ class GeneratorConfig:
     generator_temperature: float = float(os.getenv("GENERATOR_TEMPERATURE", "0.2"))
     generator_max_tokens: int = int(os.getenv("GENERATOR_MAX_TOKENS", "512"))
     generator_top_p: float = float(os.getenv("GENERATOR_TOP_P", "0.9"))
-    generator_frequency_penalty: float = float(os.getenv("GENERATOR_FREQUENCY_PENALTY", "0.0"))
-    generator_presence_penalty: float = float(os.getenv("GENERATOR_PRESENCE_PENALTY", "0.0"))
     generator_ctx_tokens: int = int(os.getenv("GENERATOR_CTX_TOKENS", "2048"))
     generator_seed: int = int(os.getenv("GENERATOR_SEED", "12345"))
     generator_repeat_penalty: float = float(os.getenv("GENERATOR_REPEAT_PENALTY", "1.1"))
+    generator_num_predict: int = int(os.getenv("GENERATOR_NUM_PREDICT", "1024"))
 
 @dataclass
 class LoggingConfig:

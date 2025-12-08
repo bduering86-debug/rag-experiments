@@ -41,7 +41,6 @@ import csv
 import uuid
 import math
 import json
-import logging
 import datetime as dt
 import requests
 import random
@@ -361,7 +360,7 @@ ASSIGNEE_MAPPING = {
 # Logging Setup
 # ---------------------------------------------------------------------------
 
-logger = logging.getLogger("ticketgenerator_"+OLLAMA_MODEL_INCIDENTS)
+logger = get_logger("ticketgenerator_"+OLLAMA_MODEL_INCIDENTS)
 
 
 # ---------------------------------------------------------------------------
@@ -619,13 +618,23 @@ class TicketGenerator:
             ticket_word_additional = "Jedes"
             varianz_text = (
                 f"Varianzanforderungen:\n"
-                f"- Alle {batch_size} Tickets müssen sich klar unterscheiden in:\n"
-                f"  - konkreter Situation (Zeitpunkt, Kontext, Umgebung)\n"
-                f"  - Formulierungen (keine Copy-Paste-Texte)\n"
-                f"  - Symptomen, Fehlannahmen oder Ursachen\n"
-                f"  - Tonfall (Laie, durchschnittlich, Power-User; neutral, gestresst, frustriert)\n"
-                f"- Wiederhole keine kompletten Sätze zwischen verschiedenen Tickets."
+                f"- Alle {batch_size} Tickets müssen sich klar unterscheiden.\n"
+                f"- Variiere Situation, Ursache, Symptome, Tonfall, Nutzerwissen und Formulierungen.\n"
+                f"- Keine identischen Sätze zwischen verschiedenen Tickets.\n"
+                f"ZUSÄTZLICHE VARIANZANFORDERUNGEN (WICHTIG):\n"
+                f"- Alle Titel müssen sich in Wortwahl UND Struktur unterscheiden.\n"
+                f"- Die Beschreibungen müssen unterschiedliche Situationen darstellen "
+                f"(z. B. Fehlercodes, Symptome, Nutzeraktionen).\n"
+                f"- Die gold_resolution MUSS inhaltlich je Ticket verschieden sein "
+                f"(andere Ursache, andere Lösungsschritte).\n"
+                f"- issue_type MUSS gesetzt werden (z. B. \"AuthenticationError\", "
+                f"\"ConnectionFailure\", \"Timeout\", \"ClientBug\", \"ServerMisconfiguration\").\n"
+                f"- error_code MUSS entweder realistisch wirken (\"0x80070005\", "
+                f"\"ERR_PROXY_CONNECTION_FAILED\") oder \"\" sein – aber NICHT in allen Tickets gleich.\n"
+                f"- Vermeide generische Formulierungen wie \"Ein Update für das Tool ist erforderlich\".\n"
+                f"- Die Texte müssen deutlich voneinander abweichen; erkennbare Wiederholungen sind NICHT erlaubt."
             )
+
 
         reporter_compact = [
             {"r": u["reporter"], "h": u["hostname"], "s": u["site"]}
@@ -633,23 +642,27 @@ class TicketGenerator:
         ]
 
         prompt = f"""
-        Du bist ein ITSM-Helpdesk-Agent und erzeugst realistische Incident-Tickets
-        für ein IT-Service-Management-System.
+        Du erzeugst realistische IT-Incident-Tickets für ein ITSM-System.
 
         Erzeuge {ticket_count_phrase} {array_phrase}. Keine Erklärungen, kein Text außerhalb des JSON-Arrays.
         Die Antwort MUSS mit "[" beginnen und mit "]" enden.
 
         Feste Vorgaben für JEDES {ticket_word}:
+        - Verwende grammatikalisch möglichst korrektes Hochdeutsch.
         - category: "{prompt_arguments['category_prompt']}"
         - service: "{prompt_arguments['service_prompt']}"
         - os: "{prompt_arguments['os_prompt']}"
-        - impact: eine Auswahl aus ["1-High","2-Medium","3-Low"]
-        - urgency: eine Auswahl aus ["1-High","2-Medium","3-Low"]
-        - priority_level / priority: gemäß Matrix {priority_map}
-        - status: eine Auswahl aus ["Gelöst","Offen","Abgebrochen","Zurückgewiesen"] (ca. 90% "Gelöst")
+        - impact: eine Auswahl aus ["1-High","2-Medium","3-Low"] -> nur die Zahl
+        - urgency: eine Auswahl aus ["1-High","2-Medium","3-Low"] -> nur die Zahl
+        - priority_level / priority: gemäß Matrix {priority_map} -> nur die Zahl
+        - status: immer "Gelöst"
         - assignee: "{prompt_arguments['assignee_prompt']}"
         - assigned_group: "{prompt_arguments['assigned_group_prompt']}"
-        - reporter, hostname, site NUR aus dieser Liste wählen (ID ignorieren):
+        Verwende für jedes Ticket GENAU EIN Element aus der folgenden Liste und WEISE DIE FELDER korrekt zu:
+        - reporter = Wert aus "r"
+        - hostname = Wert aus "h"
+        - site = Wert aus "s"
+        Die Auswahl für jedes Ticket MUSS aus dieser Liste stammen, und jedes Element darf mehrfach verwendet werden:
         {reporter_compact}
 
         Inhalte / Stil:
@@ -660,13 +673,17 @@ class TicketGenerator:
         - 1–2 kurze Sätze, realistisch, verschiedene Formulierungen
         - max. ca. 20 Wörter pro Satz
         - conversation_history:
-        - GENAU 2 Einträge
-        - je Eintrag 1 kurzer Satz (max. ca. 15 Wörter)
-        - abwechselnd Nutzer- und Support-Perspektive (Fragen, Nachfragen, Lösungsversuche)
+            - Immer "" (leer lassen) -> erzeuge keine Gesprächshistorie
         - ticket_fulltext: immer "" (leer lassen)
         - gold_kb_id: immer "" (leer lassen)
         - comments_count:
-        - Anzahl der Einträge in conversation_history (also 2)
+            - Immer "" (leer lassen)
+        - gold_resolution: GENAU 1 kurzer Satz (max. 20 Wörter) zur Lösung. Muss konkrete Maßnahmen nennen, z. B. Konfigurationsänderungen, Registry-Anpassungen, Dienstneustarts, Patch-Nummern, Berechtigungen.
+         Muss einer dieser Kategorien entsprechen:
+        ["AuthenticationError", "ConnectivityIssue", "PermissionDenied", "Timeout", "ClientBug", "Misconfiguration", "OutOfMemory", "ServiceUnavailable"]
+        error_code:
+        - Kann einer dieser Varianten entsprechen:
+        ["0x80070005", "ERR_SSL_VERSION", "ERR_PROXY_CONNECTION_FAILED", "0x80004005", "404", "503", ""]
 
         {varianz_text}
 
@@ -727,10 +744,10 @@ class TicketGenerator:
             "options": {
                 "temperature": config.GeneratorConfig.generator_temperature,
                 "top_p": config.GeneratorConfig.generator_top_p, 
-                #"num_ctx": config.GeneratorConfig.generator_ctx_tokens,
-                #"repeat_penalty": config.GeneratorConfig.generator_repeat_penalty,
-                #"num_predict": 1024
-                #"seed": config.GeneratorConfig.generator_seed,
+                "num_ctx": config.GeneratorConfig.generator_ctx_tokens,
+                "repeat_penalty": config.GeneratorConfig.generator_repeat_penalty,
+                "num_predict": config.GeneratorConfig.generator_num_predict,
+                "seed": config.GeneratorConfig.generator_seed,
             }
         }
 
@@ -920,8 +937,10 @@ def main() -> None:
         top_p=config.GeneratorConfig.generator_top_p, 
         ctx_tokens=config.GeneratorConfig.generator_ctx_tokens,
         repeat_penalty=config.GeneratorConfig.generator_repeat_penalty,
-        seed=config.GeneratorConfig.generator_seed
+        seed=config.GeneratorConfig.generator_seed,
+        num_predict=config.GeneratorConfig.generator_num_predict
     )
+    
 
     generator = TicketGenerator(
         base_url=OLLAMA_HOST,

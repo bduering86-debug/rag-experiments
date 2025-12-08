@@ -9,6 +9,7 @@ MODELS = [
     "mistral-nemo",
 ]
 
+# Todo: einbinden und testen von weiteren Modellen
 def run_tests(num_tickets: int):
     for model in MODELS:
         print("=" * 80)

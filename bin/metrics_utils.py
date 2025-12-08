@@ -30,6 +30,7 @@ class OllamaRunMetrics:
     ctx_tokens: int = 0
     repeat_penalty: float = 0.0
     seed: Optional[int] = None
+    num_predict: Optional[int] = None
 
 
 _metrics: Optional[OllamaRunMetrics] = None
@@ -43,7 +44,8 @@ def start_run(
     top_p: float,
     ctx_tokens: int,
     repeat_penalty: float,
-    seed: int
+    seed: int,
+    num_predict: int
 ) -> str:
     """
     Startet einen neuen Metrics-Run für die Ticketgenerierung.
@@ -139,7 +141,7 @@ def end_run() -> None:
             "total_eval_tokens=%s, total_prompt_tokens=%s, "
             "llm_time=%.2fs, wall_time=%.2fs, "
             "avg_eval_tokens_per_call=%.1f, avg_tokens_per_second=%.2f, "
-            "temperature=%.2f, top_p=%.2f, ctx_tokens=%s, repeat_penalty=%.2f, seed=%s"
+            "temperature=%.2f, top_p=%.2f, ctx_tokens=%s, repeat_penalty=%.2f, seed=%s, num_predict=%s"
         ),
         _metrics.run_id,
         _metrics.model,
@@ -154,7 +156,8 @@ def end_run() -> None:
         _metrics.top_p,
         _metrics.ctx_tokens,
         _metrics.repeat_penalty,
-        _metrics.seed
+        _metrics.seed,
+        _metrics.num_predict
     )
 
     # Reset für nächsten Run
