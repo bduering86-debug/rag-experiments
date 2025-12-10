@@ -29,10 +29,18 @@ class EmbeddingConfig:
 
 @dataclass
 class OllamaConfig:
+    #URLs für verschiedene Profile
     url: str = os.getenv("OLLAMA_URL", "")
+    url_low_profile: str = os.getenv("OLLAMA_URL_LOW_PROFILE", "")
+    url_mid_profile: str = os.getenv("OLLAMA_URL_MID_PROFILE", "")
+    url_high_profile: str = os.getenv("OLLAMA_URL_HIGH_PROFILE", "")
+    url_ultra_profile: str = os.getenv("OLLAMA_URL_ULTRA_PROFILE", "")
+    url_test: str = os.getenv("OLLAMA_URL_TEST", "")
+
+    #Standardmodell
     model: str = os.getenv("OLLAMA_MODEL", "")
     threads: int = int(os.getenv("OLLAMA_THREADS", "8"))
-
+    
 @dataclass
 class DataConfig:
     data_dir: str = os.getenv("DATA_DIR", "")
@@ -62,7 +70,7 @@ class GeneratorConfig:
     total_tickets: int = int(os.getenv("TOTAL_TICKETS", "1"))
     tickets_per_call: int = int(os.getenv("TICKETS_PER_CALL", "1"))
     generator_model_incidents: str = os.getenv("GENERATOR_MODEL_INCIDENTS", "llama3.1:8b-instruct-q4_K_M")
-    generator_model_knowledgebase: str = os.getenv("GENERATOR_MODEL_KNOWLEDGEBASE", "llama3.1:8b-instruct-q4_K_M")
+    
     generator_temperature: float = float(os.getenv("GENERATOR_TEMPERATURE", "0.2"))
     generator_max_tokens: int = int(os.getenv("GENERATOR_MAX_TOKENS", "512"))
     generator_top_p: float = float(os.getenv("GENERATOR_TOP_P", "0.9"))
@@ -70,6 +78,15 @@ class GeneratorConfig:
     generator_seed: int = int(os.getenv("GENERATOR_SEED", "12345"))
     generator_repeat_penalty: float = float(os.getenv("GENERATOR_REPEAT_PENALTY", "1.1"))
     generator_num_predict: int = int(os.getenv("GENERATOR_NUM_PREDICT", "1024"))
+    
+    generator_model_knowledgebase: str = os.getenv("GENERATOR_MODEL_KNOWLEDGEBASE", "llama3.1:8b-instruct-q4_K_M")
+    generator_model_knowledgebase_test: str = os.getenv("GENERATOR_MODEL_KNOWLEDGEBASE_TEST", "phi3:3.8b")
+    generator_tickets_for_kb_context: int = int(os.getenv("GENERATOR_TICKETS_FOR_KB_CONTEXT", "10"))
+    generator_kb_temperature: float = float(os.getenv("GENERATOR_KB_TEMPERATURE", "0.5"))
+    generator_kb_top_p: float = float(os.getenv("GENERATOR_KB_TOP_P", "0.9"))
+    generator_kb_repeat_penalty: float = float(os.getenv("GENERATOR_KB_REPEAT_PENALTY", "1.1"))
+    generator_kb_ctx_tokens: int = int(os.getenv("GENERATOR_KB_CTX_TOKENS", "4096"))
+    generator_kb_num_predict: int = int(os.getenv("GENERATOR_KB_NUM_PREDICT", "1500"))
 
 @dataclass
 class LoggingConfig:
