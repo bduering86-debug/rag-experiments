@@ -35,6 +35,65 @@ from bin import metrics_utils
 
 logger = get_logger("kb_generator")
 
+#----------------------------
+# Hilfsfunktionen
+#----------------------------
+
+def _normalize_list(value) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [", ".join(str(v) for v in value.values())]
+    if isinstance(value, list):
+        out: List[str] = []
+        for item in value:
+            if isinstance(item, dict):
+                out.append(", ".join(str(v) for v in item.values()))
+            else:
+                out.append(str(item))
+        return out
+    return [str(value)]
+
+def _normalize_to_str_list(value) -> list[str]:
+    """
+    Nimmt beliebige Werte (str, list, dict, None, etc.)
+    und gibt eine Liste sinnvoller Strings zurück.
+    Leere Objekte werden entfernt.
+    """
+    if value is None:
+        return []
+
+    # Einfacher String
+    if isinstance(value, str):
+        s = value.strip()
+        return [s] if s else []
+
+    # Dict -> "key=value, key2=value2" (falls leer: ignorieren)
+    if isinstance(value, dict):
+        if not value:  # leeres {}
+            return []
+        joined = ", ".join(f"{k}={v}" for k, v in value.items())
+        joined = joined.strip()
+        return [joined] if joined else []
+
+    # Liste -> rekursiv über alle Elemente
+    if isinstance(value, list):
+        out: list[str] = []
+        for item in value:
+            out.extend(_normalize_to_str_list(item))
+        # Alles, was leer ist, rauswerfen
+        return [s for s in out if s.strip()]
+
+    # Fallback: alles andere als String
+    s = str(value).strip()
+    return [s] if s else []
+
+
+#----------------------------
+# Hauptklassen
+#----------------------------
 @dataclass
 class KBGeneratorConfig:
     tickets_csv: Path
@@ -69,43 +128,94 @@ class KBArticle:
     resolution_steps: List[str]
     validation: str
     related_ticket_ids: List[str] = field(default_factory=list)
+    kb_fulltext: str = "" 
 
     @classmethod
+    @classmethod
     def from_llm_json(cls, data: Dict[str, Any]) -> "KBArticle":
-        return cls(
-            kb_id=str(data.get("kb_id", "")),
-            title=str(data.get("title", "")),
-            category=str(data.get("category", "")),
-            service=str(data.get("service", "")),
-            issue_type=str(data.get("issue_type", "")),
-            error_codes=list(data.get("error_codes", [])),
-            environment=str(data.get("environment", "")),
-            problem=str(data.get("problem", "")),
-            symptoms=list(data.get("symptoms", [])),
-            root_cause=str(data.get("root_cause", "")),
-            resolution_steps=list(data.get("resolution_steps", [])),
-            validation=str(data.get("validation", "")),
-            related_ticket_ids=list(data.get("related_ticket_ids", [])),
+        error_codes = _normalize_to_str_list(data.get("error_codes", []))
+        symptoms = _normalize_to_str_list(data.get("symptoms", []))
+        root_cause_list = _normalize_to_str_list(data.get("root_cause", []))
+        resolution_steps = _normalize_to_str_list(data.get("resolution_steps", []))
+        related_ids = _normalize_to_str_list(data.get("related_ticket_ids", []))
+
+        article = cls(
+            kb_id=data.get("kb_id", ""),
+            title=data.get("title", ""),
+            category=data.get("category", ""),
+            service=data.get("service", ""),
+            issue_type=data.get("issue_type", ""),
+            error_codes=error_codes,
+            environment=data.get("environment", {}) or {},
+            problem=data.get("problem", ""),
+            symptoms=symptoms,
+            root_cause=" | ".join(root_cause_list),   # intern als String oder:
+            # root_cause=root_cause_list,            # falls du es als Liste speichern willst
+            resolution_steps=resolution_steps,
+            validation=data.get("validation", ""),
+            related_ticket_ids=related_ids,
+            kb_fulltext=data.get("kb_fulltext", ""),
         )
 
-    def to_csv_row(self) -> Dict[str, Any]:
+        if not article.kb_fulltext:
+            article.kb_fulltext = cls.build_fulltext(article)
+
+        return article
+
+
+
+    def to_csv_row(self) -> Dict[str, str]:
         return {
             "kb_id": self.kb_id,
             "title": self.title,
             "category": self.category,
             "service": self.service,
             "issue_type": self.issue_type,
-            "error_codes": "|".join(self.error_codes),
-            "environment": self.environment,
+            "error_codes": " | ".join(_normalize_to_str_list(self.error_codes)),
+            "environment": (
+                self.environment
+                if isinstance(self.environment, str)
+                else json.dumps(self.environment, ensure_ascii=False)
+            ),
             "problem": self.problem,
-            "symptoms": " | ".join(self.symptoms),
-            "root_cause": self.root_cause,
-            "resolution_steps": " | ".join(self.resolution_steps),
+            "symptoms": " | ".join(_normalize_to_str_list(self.symptoms)),
+            "root_cause": " | ".join(_normalize_to_str_list(self.root_cause)),
+            "resolution_steps": " | ".join(_normalize_to_str_list(self.resolution_steps)),
             "validation": self.validation,
-            "related_ticket_ids": "|".join(self.related_ticket_ids),
+            "related_ticket_ids": " | ".join(_normalize_to_str_list(self.related_ticket_ids)),
+            "kb_fulltext": self.kb_fulltext,
         }
 
 
+    @staticmethod
+    def build_fulltext(article: "KBArticle") -> str:
+        parts: List[str] = []
+
+        if article.kb_id:
+            parts.append(f"KB-ID: {article.kb_id}")
+        if article.title:
+            parts.append(f"Titel: {article.title}")
+        if article.category or article.service:
+            parts.append(f"Kategorie/Service: {article.category} / {article.service}")
+        if article.issue_type:
+            parts.append(f"Issue-Typ: {article.issue_type}")
+        if article.error_codes:
+            parts.append("Fehlercodes: " + ", ".join(_normalize_to_str_list(article.error_codes)))
+        if article.problem:
+            parts.append("Problem: " + article.problem)
+        if article.symptoms:
+            parts.append("Symptome: " + " | ".join(_normalize_to_str_list(article.symptoms)))
+        if article.root_cause:
+            parts.append("Ursache: " + " | ".join(_normalize_to_str_list(article.root_cause)))
+        if article.resolution_steps:
+            parts.append("Lösungsschritte: " + " | ".join(_normalize_to_str_list(article.resolution_steps)))
+        if article.validation:
+            parts.append("Validierung: " + article.validation)
+
+
+
+        # nur nicht-leere Teile zusammenführen
+        return "\n".join(p for p in parts if p.strip())
 
 class KBGenerator:
     def __init__(self, config: KBGeneratorConfig) -> None:
@@ -174,6 +284,7 @@ class KBGenerator:
             "resolution_steps",
             "validation",
             "related_ticket_ids",
+            "kb_fulltext",
         ]
 
         # --- Tickets-mit-KB-CSV vorbereiten (Header einmal schreiben) ---
@@ -224,11 +335,16 @@ class KBGenerator:
                 if not kb_article.kb_id:
                     kb_article.kb_id = kb_id
 
+                # Fulltext sicherstellen (falls from_llm_json ihn nicht schon gebaut hat)
+                if not getattr(kb_article, "kb_fulltext", ""):
+                    kb_article.kb_fulltext = KBArticle.build_fulltext(kb_article)
+
                 kb_articles.append(kb_article)
 
-                # Direkt nach dem Append: Zeile in die KB-CSV schreiben
+                # Direkt nach dem Append: Zeile in die CSV schreiben
                 kb_row = kb_article.to_csv_row()
                 kb_writer.writerow(kb_row)
+
                 logger.debug("KB-Artikel in CSV geschrieben: %s", kb_row["kb_id"])
 
                 # Alle Tickets der Gruppe bekommen diese KB-ID
@@ -342,89 +458,133 @@ class KBGenerator:
     # ----------------------------
 
     def _build_prompt_for_group(
-        self,
-        kb_id: str,
-        kb_key: str,
-        tickets: List[Dict[str, Any]],
+    self,
+    kb_id: str,
+    kb_key: str,
+    repr_tickets: List[Dict[str, Any]],
     ) -> str:
         """
-        Baut einen Prompt, der aus einer Gruppe ähnlicher Tickets genau EINEN KB-Artikel erzeugen soll.
+        Baut den Prompt für die KB-Generierung aus einer Ticket-Gruppe.
+
+        kb_key hat das Format: "<category>|<service>|<issue_type>|<error_code>"
+        repr_tickets ist eine Liste repräsentativer Tickets dieser Gruppe.
         """
 
-        # Kontext kompakt aufbereiten
-        compact_tickets = []
-        for t in tickets:
-            compact_tickets.append(
+        # kb_key aufsplitten (robust gegen fehlende Teile)
+        parts = kb_key.split("|")
+        category = parts[0] if len(parts) > 0 else ""
+        service = parts[1] if len(parts) > 1 else ""
+        issue_type = parts[2] if len(parts) > 2 else ""
+        error_code = parts[3] if len(parts) > 3 and parts[3] != "NONE" else ""
+
+        # Tickets für den Prompt kompakt aufbereiten
+        tickets_for_prompt: List[Dict[str, Any]] = []
+        related_ids: List[str] = []
+
+        for t in repr_tickets:
+            tid = t.get("id") or t.get("ticket_id")
+            if tid:
+                related_ids.append(str(tid))
+
+            tickets_for_prompt.append(
                 {
-                    "id": t.get("id"),
-                    "title": t.get("title"),
-                    "description": t.get("description"),
-                    "impact": t.get("impact"),
-                    "urgency": t.get("urgency"),
-                    "priority_level": t.get("priority_level"),
-                    "priority": t.get("priority"),
-                    "category": t.get("category"),
-                    "service": t.get("service"),
-                    "issue_type": t.get("issue_type"),
-                    "error_code": t.get("error_code"),
-                    "os": t.get("os"),
-                    "gold_resolution": t.get("gold_resolution"),
+                    "id": tid,
+                    "title": t.get("title", ""),
+                    "description": t.get("description", ""),
+                    "impact": t.get("impact", ""),
+                    "urgency": t.get("urgency", ""),
+                    "priority": t.get("priority", ""),
+                    "status": t.get("status", ""),
+                    "os": t.get("os", ""),
+                    "site": t.get("site", ""),
+                    "error_code": t.get("error_code", ""),
+                    "gold_resolution": t.get("gold_resolution", ""),
                 }
             )
 
-        tickets_json = json.dumps(compact_tickets, ensure_ascii=False, indent=2)
+        tickets_json = json.dumps(tickets_for_prompt, ensure_ascii=False, indent=2)
+        related_ids_json = json.dumps(list(dict.fromkeys(related_ids)), ensure_ascii=False)
 
         prompt = f"""
-Du bist ein erfahrener ITSM-Wissensdatenbank-Autor.
+    Du bist ein erfahrener ITSM-Wissensdatenbank-Autor.
 
-Du erhältst mehrere Incident-Tickets, die alle zum gleichen technischen Problem gehören
-(gleiche Kategorie, Service, issue_type und ggf. error_code).
+    Du erhältst mehrere Incident-Tickets, die zum gleichen technischen Problem gehören
+    (gleiche Kategorie, Service, issue_type und ggf. error_code).
 
-Deine Aufgabe:
-- Fasse das zugrunde liegende Problem in EINEM allgemeinen Wissensartikel zusammen.
-- Beschreibe das Problem, typische Symptome, mögliche Ursachen und die empfohlenen Lösungsschritte.
-- Leite aus den Beispieltickets eine robuste, wiederverwendbare Lösung ab.
-- Hänge am Ende eine Liste der Ticket-IDs an, auf die dieser Wissensartikel passt.
+    Ausgangsdaten zur Problemklasse:
+    - category: "{category}"
+    - service: "{service}"
+    - issue_type: "{issue_type}"
+    - error_code: "{error_code}"
 
-WICHTIG:
-- Erzeuge GENAU EINEN Wissensartikel.
-- Nutze die vorgegebene kb_id "{kb_id}" im Feld "kb_id".
-- Achte auf technische Korrektheit, konsistente Terminologie und prägnante Formulierungen.
-- Der Artikel soll Administrator:innen und Support-Teams helfen, das Problem schnell zu erkennen und zu beheben.
+    Beispiel-Tickets zu diesem Problem (nur Kontext, NICHT zurückgeben):
+    {tickets_json}
 
-Gib die Antwort AUSSCHLIESSLICH als JSON-Objekt zurück, ohne Erklärungen oder ```-Codeblock.
+    Deine Aufgabe:
+    1. Analysiere die Tickets und leite EIN übergreifendes technisches Problem ab.
+    2. Formuliere einen wiederverwendbaren Wissensartikel für die ITSM-Knowledgebase.
+    3. Beschreibe:
+    - das allgemeine Problem,
+    - typische Symptome,
+    - mögliche Ursachen,
+    - empfohlene Lösungsschritte,
+    - wie die Lösung verifiziert werden kann.
 
-JSON-Struktur:
+    ERWARTETE FELDER IM JSON-OBJEKT:
 
-{{
-  "kb_id": "KB-XXXX",
-  "title": "Kurzer, prägnanter Titel für das Problem",
-  "category": "<Kategorie, z.B. {tickets[0].get("category", "")}>",
-  "service": "<Service, z.B. {tickets[0].get("service", "")}>",
-  "issue_type": "<Issue-Typ, z.B. {tickets[0].get("issue_type", "")}>",
-  "error_codes": ["Liste", "von", "relevanten", "Fehlercodes"],
-  "environment": "Typische Umgebung (z.B. Betriebssystem, Anwendungsversion, Infrastruktur-Kontext)",
-  "problem": "Beschreibung des übergeordneten Problems (2–4 Sätze).",
-  "symptoms": [
-    "Stichpunktartige Liste typischer Symptome.",
-    "Nutze Beispiele aus den Tickets (ohne wörtlich alle zu wiederholen)."
-  ],
-  "root_cause": "Mögliche oder wahrscheinliche Ursache(n) des Problems (1–3 Sätze).",
-  "resolution_steps": [
-    "Schritt 1: ...",
-    "Schritt 2: ...",
-    "Schritt 3: ..."
-  ],
-  "validation": "Wie kann verifiziert werden, dass das Problem behoben ist?",
-  "related_ticket_ids": ["<ID1>", "<ID2>", "..."]
-}}
+    Gib GENAU EIN JSON-Objekt mit den folgenden Schlüsseln zurück:
 
-Verwende als "related_ticket_ids" NUR die Ticket-IDs aus den folgenden Beispieltickets:
+    - "kb_id": String
+        * Verwende bevorzugt die gegebene KB-ID: "{kb_id}"
+    - "title": String
+        * Prägnanter Titel, der das Problem beschreibt.
+    - "category": String
+        * Verwende die gegebene Kategorie: "{category}"
+    - "service": String
+        * Verwende den gegebenen Service: "{service}"
+    - "issue_type": String
+        * Verwende den gegebenen issue_type: "{issue_type}"
+    - "error_codes": Liste von Strings
+        * Entweder [ "{error_code}" ] falls sinnvoll
+        * oder [] (leere Liste), wenn kein spezifischer Code wichtig ist.
+    - "environment": String
+        * Kurzbeschreibung der betroffenen Umgebung (z. B. Betriebssysteme, Applikationstyp, typische Kontexte).
+    - "problem": String
+        * Zusammenfassung des technischen Kernproblems in 2–4 Sätzen.
+    - "symptoms": Liste von Strings
+        * 3–6 allgemeine Symptome (z. B. Fehlermeldungen, beobachtetes Verhalten).
+        * KEINE Ticket-IDs, KEINE Ticket-Titel, KEINE Objekte oder Dictionaries.
+        * Jedes Element muss ein einfacher String sein.
+    - "root_cause": Liste von Strings
+        * 1–4 mögliche Ursachen in Stichpunkten.
+        * Jedes Element muss ein einfacher String sein.
+    - "resolution_steps": Liste von Strings
+        * Konkrete, geordnete Lösungsschritte (3–7 Einträge, jeweils 1–2 Sätze).
+        * Jedes Element muss ein einfacher String sein.
+    - "validation": String
+        * Wie wird überprüft, dass das Problem wirklich gelöst ist (1–3 Sätze).
+    - "related_ticket_ids": Liste von Strings
+        * NUR die IDs der Tickets, die zu dieser Problemklasse gehören.
+        * Verwende GENAU diese IDs: {related_ids_json}
+    - "kb_fulltext": dieses Feld SOLL NICHT gesetzt werden.
+        * LASS dieses Feld komplett weg. Es wird später im System automatisch erzeugt.
 
-{tickets_json}
-""".strip()
+    FORMATREGELN (SEHR WICHTIG):
+
+    - Antworte mit GENAU EINEM JSON-Objekt.
+    - KEIN JSON-Array, KEINE zusätzliche Ebene.
+    - KEINE Markdown-Formatierung, KEIN ```json-Codeblock.
+    - KEIN Fließtext außerhalb des JSON-Objekts.
+    - "symptoms", "root_cause" und "resolution_steps" dürfen ausschließlich Listen von Strings enthalten.
+    * KEINE Dictionaries/Objekte, KEINE Ticket-Metadaten.
+    - "related_ticket_ids" darf ausschließlich Ticket-IDs als Strings enthalten.
+
+    ANTWORT:
+    Gib NUR das JSON-Objekt zurück.
+    """.strip()
 
         return prompt
+
 
     # ----------------------------
     # Step 5: Ollama-Call
@@ -551,37 +711,6 @@ Verwende als "related_ticket_ids" NUR die Ticket-IDs aus den folgenden Beispielt
 
         logger.info("KB-CSV geschrieben: %s (Anzahl KBs: %s)", output, len(kb_articles))
 
-    def _write_tickets_with_kb_csv(
-        self,
-        tickets: List[Dict[str, Any]],
-        ticket_to_kb_id: Dict[str, str],
-    ) -> None:
-        output = Path(self.cfg.output_tickets_with_kb_csv)
-        output.parent.mkdir(parents=True, exist_ok=True)
-
-        if not tickets:
-            logger.warning("Keine Tickets für tickets_with_kb-CSV.")
-            return
-
-        fieldnames = list(tickets[0].keys())
-        if "gold_kb_id" not in fieldnames:
-            fieldnames.append("gold_kb_id")
-
-        with output.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for t in tickets:
-                t = dict(t)  # kopie
-                kb_id = ticket_to_kb_id.get(t["id"], "")
-                t["gold_kb_id"] = kb_id
-                writer.writerow(t)
-
-        logger.info(
-            "Tickets-mit-KB-CSV geschrieben: %s (Tickets: %s)",
-            output, len(tickets)
-        )
-
-
 # ----------------------------
 # Optionales CLI-Main
 # ----------------------------
@@ -592,12 +721,12 @@ def main():
 
         # Optionen aus der config.py nutzen -> manuell angepasst
         #tickets_csv=Path(config.GeneratorConfig().output_dir+"/synthetic_incidents_llm_phi4-mini:latest.csv"),
-        tickets_csv=Path(config.GeneratorConfig().output_dir+"/synthetic_incidents_llm_test.csv"),
-        output_kb_csv=Path(config.GeneratorConfig().output_dir+"/kb_articles_llm_test.csv"),
-        output_tickets_with_kb_csv=Path(config.GeneratorConfig().output_dir+"/synthetic_incidents_with_kb_test.csv"),
-        #ollama_host=config.OllamaConfig().url,
-        ollama_host=config.OllamaConfig().url_test,
-        model=config.GeneratorConfig().generator_model_knowledgebase_test,
+        tickets_csv=Path(config.GeneratorConfig().output_dir+"/synthetic_incidents_llm.csv"),
+        output_kb_csv=Path(config.GeneratorConfig().output_dir+"/kb_articles_llm.csv"),
+        output_tickets_with_kb_csv=Path(config.GeneratorConfig().output_dir+"/synthetic_incidents_with_kb.csv"),
+        ollama_host=config.OllamaConfig().url,
+        #ollama_host=config.OllamaConfig().url_test,
+        model=config.GeneratorConfig().generator_model_knowledgebase,
         max_tickets_per_prompt=config.GeneratorConfig().generator_tickets_for_kb_context,
         temperature=config.GeneratorConfig().generator_kb_temperature,
         top_p=config.GeneratorConfig().generator_kb_top_p,
