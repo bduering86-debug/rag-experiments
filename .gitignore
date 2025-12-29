@@ -13,16 +13,14 @@ venv/
 
 # Data files (sensitive or large)
 data/*.csv
-output/*.csv
-output/*.txt
-output_archive/*.txt
-output_archive/*.csv
+generator/output/
+output_archive/
 
 # Qdrant persistent storage
 qdrant_data/
 
 # Logs
-*.log
+logs/
 
 # OS junk
 .DS_Store
