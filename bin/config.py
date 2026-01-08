@@ -1,11 +1,17 @@
 import os
 from dataclasses import dataclass
-from dotenv import load_dotenv
+
+# dotenv ist optional für Tests; falls nicht installiert, keine .env laden
+try:
+    from dotenv import load_dotenv  # type: ignore
+except Exception:
+    def load_dotenv(path: str | None = None):
+        return None
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 ENV_FILE = os.path.join(BASE_DIR, ".env")
 
-#if ENV_FILE.exists():
+# Versuche, die .env Datei zu laden (noop falls dotenv fehlt)
 load_dotenv(ENV_FILE)
 
 def _str_to_bool(value: str | None, default: bool = True) -> bool:
@@ -43,9 +49,10 @@ class OllamaConfig:
     
 @dataclass
 class DataConfig:
-    data_dir: str = os.getenv("DATA_DIR", "")
-    incident_csv: str = os.getenv("INCIDENT_CSV", "incidents.csv")
-    kb_csv: str = os.getenv("KB_CSV", "kb.csv")
+    data_dir: str = os.getenv("DATA_DIR", os.path.join(BASE_DIR, "data"))
+    # Standard auf vorhandene Dateien im `data`-Ordner setzen
+    incident_csv: str = os.getenv("INCIDENT_CSV", "synthetic_incidents_with_kb.csv")
+    kb_csv: str = os.getenv("KB_CSV", "kb_articles_llm.csv")
     total_tickets: int = int(os.getenv("TOTAL_TICKETS", "20"))
     tickets_per_call: int = int(os.getenv("TICKETS_PER_CALL", "5"))
     model_incidents: str = os.getenv("OLLAMA_MODEL_INCIDENTS", "llama3.1:8b-instruct-q4_K_M")

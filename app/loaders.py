@@ -1,14 +1,37 @@
 from typing import List
 import os
-import pandas as pd
-from langchain_core.documents import Document
+import csv
+
+# pandas ist optional; wenn nicht installiert, verwenden wir csv.DictReader als Fallback
+try:
+    import pandas as pd  # type: ignore
+except Exception:
+    pd = None
+
+try:
+    from langchain_core.documents import Document
+except Exception:
+    # Minimal fallback Document for environments without langchain_core
+    from dataclasses import dataclass
+
+    @dataclass
+    class Document:
+        page_content: str
+        metadata: dict
 
 
 def load_incidents_csv(path: str) -> List[Document]:
-    df = pd.read_csv(path)
     docs: List[Document] = []
 
-    for _, row in df.iterrows():
+    if pd is not None:
+        df = pd.read_csv(path)
+        iterator = (row for _, row in df.iterrows())
+    else:
+        f = open(path, newline='', encoding='utf-8')
+        reader = csv.DictReader(f)
+        iterator = reader
+
+    for row in iterator:
 
         # Felder aus CSV lesen und Variablen zuweisen
         ticket_id = str(row.get("ticket_id", ""))
@@ -38,14 +61,23 @@ def load_incidents_csv(path: str) -> List[Document]:
         # Dokument zusammenstellen und zur Liste hinzufügen
         docs.append(Document(page_content=content, metadata=metadata))
 
+    if pd is None:
+        f.close()
     return docs
 
 
 def load_kb_csv(path: str) -> List[Document]:
-    df = pd.read_csv(path)
     docs: List[Document] = []
 
-    for _, row in df.iterrows():
+    if pd is not None:
+        df = pd.read_csv(path)
+        iterator = (row for _, row in df.iterrows())
+    else:
+        f = open(path, newline='', encoding='utf-8')
+        reader = csv.DictReader(f)
+        iterator = reader
+
+    for row in iterator:
         kb_id = str(row.get("kb_id", ""))
         title = str(row.get("title", ""))
         summary = str(row.get("summary", ""))
@@ -67,4 +99,6 @@ def load_kb_csv(path: str) -> List[Document]:
 
         docs.append(Document(page_content=page_content, metadata=metadata))
 
+    if pd is None:
+        f.close()
     return docs
