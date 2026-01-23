@@ -22,8 +22,8 @@ def _str_to_bool(value: str | None, default: bool = True) -> bool:
 @dataclass
 class QdrantConfig:
     url: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    inc_collection: str = os.getenv("QDRANT_INC_COLLECTION", "incidents_csv")
-    kb_collection: str = os.getenv("QDRANT_KB_COLLECTION", "kb_csv")
+    inc_collection: str = os.getenv("QDRANT_INC_COLLECTION", "incidents")
+    kb_collection: str = os.getenv("QDRANT_KB_COLLECTION", "knowledgebase")
 
 
 @dataclass
