@@ -1,0 +1,51 @@
+Metadata-Version: 2.4
+Name: rag-csv
+Version: 1.0.0
+Summary: Retrieval Augmented Generation System für CSV-basierte Knowledge Bases
+Author: Team RAG
+Author-email: Team RAG <team@example.com>
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: langchain>=0.1.0
+Requires-Dist: langchain-community>=0.0.10
+Requires-Dist: langchain-text-splitters>=0.0.1
+Requires-Dist: ollama>=0.1.0
+Requires-Dist: qdrant-client<2.0.0,>=1.6.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=23.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: pylint>=2.0; extra == "dev"
+Requires-Dist: flake8>=6.0; extra == "dev"
+Provides-Extra: bench
+Requires-Dist: matplotlib>=3.0; extra == "bench"
+Requires-Dist: seaborn>=0.12; extra == "bench"
+Dynamic: author
+Dynamic: requires-python
+
+# rag-experiments
+
+Developer notes
+
+See the full developer documentation in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
+
+Common commands
+
+```bash
+source venv/bin/activate
+python -m app.setup_collections --recreate   # create qdrant collections
+python -m app.ingest_kb
+python -m app.ingest_incidents
+python -m app.test_embeddings
+```
+
+If you want the project to avoid runtime adapters, pin compatible versions of
+`qdrant-client` and `langchain-qdrant` in your environment.

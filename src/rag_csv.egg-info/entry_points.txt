@@ -1,0 +1,5 @@
+[console_scripts]
+rag-benchmark = rag_csv.cli:benchmark_cmd
+rag-generate = rag_csv.cli:generate_cmd
+rag-ingest = rag_csv.cli:ingest_cmd
+rag-query = rag_csv.cli:query_cmd

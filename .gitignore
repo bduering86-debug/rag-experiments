@@ -25,3 +25,10 @@ logs/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Output Directory - generierte Dateien
+output/**/*.csv
+output/**/*.json
+output/**/*.log
+output/**/ollama_calls.csv
+!output/README.md

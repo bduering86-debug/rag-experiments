@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-csv"
+version = "1.0.0"
+description = "Retrieval Augmented Generation System für CSV-basierte Knowledge Bases"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Team RAG", email = "team@example.com"}
+]
+
+dependencies = [
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
+    "langchain-text-splitters>=0.0.1",
+    "ollama>=0.1.0",
+    "qdrant-client>=1.6.0,<2.0.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "mypy>=1.0",
+    "pylint>=2.0",
+    "flake8>=6.0",
+]
+
+bench = [
+    "matplotlib>=3.0",
+    "seaborn>=0.12",
+]
+
+[project.scripts]
+rag-query = "rag_csv.cli:query_cmd"
+rag-ingest = "rag_csv.cli:ingest_cmd"
+rag-benchmark = "rag_csv.cli:benchmark_cmd"
+rag-generate = "rag_csv.cli:generate_cmd"
+
+[tool.setuptools]
+packages = ["rag_csv"]
+
+[tool.setuptools.package-data]
+rag_csv = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | tests/.*/setup.py
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_mode = 3
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --cov=src/rag_csv --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["src/rag_csv"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
