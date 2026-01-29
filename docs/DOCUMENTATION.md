@@ -18,7 +18,7 @@ Quick start (developer)
 1. Create and activate virtualenv (already present in this repo as `venv`):
 
 ```bash
-cd /home/bduering/rag_csv
+cd /path/to/rag_csv
 source venv/bin/activate
 ```
 
