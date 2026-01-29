@@ -37,7 +37,7 @@ def load_incidents_csv(path: str) -> List[Document]:
         ticket_id = str(row.get("ticket_id", ""))
         title = str(row.get("title", ""))
         desc = str(row.get("description", ""))
-        history = str(row.get("history", ""))
+        history = str(row.get("conversation_history", ""))
 
         # Kontext dür LM:
         content = (
@@ -50,12 +50,15 @@ def load_incidents_csv(path: str) -> List[Document]:
         metadata = {
             "source": "incident",
             "ticket_id": ticket_id,
+            "title": title,
             "status": row.get("status", ""),
             "category": row.get("category", ""),
             "impact": row.get("impact", ""),
             "urgency": row.get("urgency", ""),
             "created_at": row.get("created_at", ""),
             "resolved_at": row.get("resolved_at", ""),
+            "gold_kb_id": row.get("gold_kb_id", ""),
+            "conversation_history": history,
         }
 
         # Dokument zusammenstellen und zur Liste hinzufügen
@@ -80,21 +83,29 @@ def load_kb_csv(path: str) -> List[Document]:
     for row in iterator:
         kb_id = str(row.get("kb_id", ""))
         title = str(row.get("title", ""))
-        summary = str(row.get("summary", ""))
-        content = str(row.get("content", ""))
+        problem = str(row.get("problem", ""))
+        symptoms = str(row.get("symptoms", ""))
+        root_cause = str(row.get("root_cause", ""))
+        resolution_steps = str(row.get("resolution_steps", ""))
+        validation = str(row.get("validation", ""))
 
         page_content = (
             f"KB-Artikel {kb_id}: {title}\n\n"
-            f"Zusammenfassung:\n{summary}\n\n"
-            f"Inhalt:\n{content}"
+            f"Problem:\n{problem}\n\n"
+            f"Symptome:\n{symptoms}\n\n"
+            f"Ursache:\n{root_cause}\n\n"
+            f"Lösungsschritte:\n{resolution_steps}\n\n"
+            f"Validierung:\n{validation}"
         )
 
         metadata = {
             "source": "kb",
             "kb_id": kb_id,
+            "title": title,
             "service": row.get("service", ""),
             "category": row.get("category", ""),
             "tags": row.get("tags", ""),
+            "related_ticket_ids": row.get("related_ticket_ids", ""),
         }
 
         docs.append(Document(page_content=page_content, metadata=metadata))

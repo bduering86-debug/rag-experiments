@@ -12,7 +12,7 @@ venv/
 .env
 
 # Data files (sensitive or large)
-data/*.csv
+*.csv
 generator/output/
 output_archive/
 

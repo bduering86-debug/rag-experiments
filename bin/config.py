@@ -21,41 +21,51 @@ def _str_to_bool(value: str | None, default: bool = True) -> bool:
 
 @dataclass
 class QdrantConfig:
-    url: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    inc_collection: str = os.getenv("QDRANT_INC_COLLECTION", "incidents")
-    kb_collection: str = os.getenv("QDRANT_KB_COLLECTION", "knowledgebase")
+    url: str = os.getenv("QDRANT_URL") or "http://localhost:6333"
+    api_key: str = os.getenv("QDRANT_API_KEY") or ""
+    inc_collection: str = os.getenv("QDRANT_INC_COLLECTION") or "incidents"
+    kb_collection: str = os.getenv("QDRANT_KB_COLLECTION") or "knowledgebase"
 
 
 @dataclass
 class EmbeddingConfig:
-    base_url: str = os.getenv("EMBEDDING_URL", "http://localhost:8080/v1/embeddings")
-    model: str = os.getenv("TEMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
-    dim: int = int(os.getenv("EMBEDDING_DIM", "384"))
+    # Ollama Embedding endpoint - Werte müssen in .env gesetzt sein
+    base_url: str = os.getenv("EMBEDDING_URL")
+    model: str = os.getenv("EMBEDDING_MODEL")
+    dim: int = int(os.getenv("EMBEDDING_DIM") or "0")
+    
+    def __post_init__(self):
+        if not self.base_url:
+            raise ValueError("EMBEDDING_URL muss in .env gesetzt sein")
+        if not self.model:
+            raise ValueError("EMBEDDING_MODEL muss in .env gesetzt sein")
+        if self.dim <= 0:
+            raise ValueError("EMBEDDING_DIM muss in .env gesetzt sein und > 0")
 
 
 @dataclass
 class OllamaConfig:
     #URLs für verschiedene Profile
-    url: str = os.getenv("OLLAMA_URL", "")
-    url_low_profile: str = os.getenv("OLLAMA_URL_LOW_PROFILE", "")
-    url_mid_profile: str = os.getenv("OLLAMA_URL_MID_PROFILE", "")
-    url_high_profile: str = os.getenv("OLLAMA_URL_HIGH_PROFILE", "")
-    url_ultra_profile: str = os.getenv("OLLAMA_URL_ULTRA_PROFILE", "")
-    url_test: str = os.getenv("OLLAMA_URL_TEST", "")
+    url: str = os.getenv("OLLAMA_URL") or ""
+    url_low_profile: str = os.getenv("OLLAMA_URL_LOW_PROFILE") or ""
+    url_mid_profile: str = os.getenv("OLLAMA_URL_MID_PROFILE") or ""
+    url_high_profile: str = os.getenv("OLLAMA_URL_HIGH_PROFILE") or ""
+    url_ultra_profile: str = os.getenv("OLLAMA_URL_ULTRA_PROFILE") or ""
+    url_test: str = os.getenv("OLLAMA_URL_TEST") or ""
 
     #Standardmodell
-    model: str = os.getenv("OLLAMA_MODEL", "")
-    threads: int = int(os.getenv("OLLAMA_THREADS", "8"))
+    #model: str = os.getenv("OLLAMA_MODEL") or ""
+    threads: int = int(os.getenv("OLLAMA_THREADS") or "8")
     
 @dataclass
 class DataConfig:
-    data_dir: str = os.getenv("DATA_DIR", os.path.join(BASE_DIR, "data"))
+    data_dir: str = os.getenv("DATA_DIR") or os.path.join(BASE_DIR, "data")
     # Standard auf vorhandene Dateien im `data`-Ordner setzen
-    incident_csv: str = os.getenv("INCIDENT_CSV", "synthetic_incidents_with_kb.csv")
-    kb_csv: str = os.getenv("KB_CSV", "kb_articles_llm.csv")
-    total_tickets: int = int(os.getenv("TOTAL_TICKETS", "20"))
-    tickets_per_call: int = int(os.getenv("TICKETS_PER_CALL", "5"))
-    model_incidents: str = os.getenv("OLLAMA_MODEL_INCIDENTS", "llama3.1:8b-instruct-q4_K_M")
+    incident_csv: str = os.getenv("INCIDENT_CSV") or "synthetic_incidents_with_kb.csv"
+    kb_csv: str = os.getenv("KB_CSV") or "kb_articles_llm.csv"
+    total_tickets: int = int(os.getenv("TOTAL_TICKETS") or "20")
+    tickets_per_call: int = int(os.getenv("TICKETS_PER_CALL") or "5")
+    model_incidents: str = os.getenv("OLLAMA_MODEL_INCIDENTS") or "llama3.1:8b-instruct-q4_K_M"
 
     @property
     def incident_path(self):
@@ -73,6 +83,7 @@ class DataConfig:
 @dataclass
 class GeneratorConfig:
     output_dir: str = os.getenv("OUTPUT_DIR", "output")
+    output_csv_path: str = os.getenv("OUTPUT_CSV_PATH") or os.getenv("OUTPUT_DIR", "output")
     output_csv_filename: str = os.getenv("OUTPUT_CSV_FILENAME", "generated_tickets.csv")
     total_tickets: int = int(os.getenv("TOTAL_TICKETS", "1"))
     tickets_per_call: int = int(os.getenv("TICKETS_PER_CALL", "1"))

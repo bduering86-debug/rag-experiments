@@ -19,17 +19,18 @@ def setup_collections(recreate: bool = False):
     Args:
         recreate: Falls True, lösche bestehende Collections und lege sie neu an
     """
-    client = QdrantClient(url=QdrantConfig.url)
+    qdrant_config = QdrantConfig()
+    client = QdrantClient(url=qdrant_config.url)
     embedding_config = EmbeddingConfig()
     
     # Einstellungen für beide Collections
     collections = [
         {
-            "name": QdrantConfig.kb_collection,
+            "name": qdrant_config.kb_collection,
             "description": "Knowledge Base Artikel"
         },
         {
-            "name": QdrantConfig.inc_collection,
+            "name": qdrant_config.inc_collection,
             "description": "ITSM Incidents"
         }
     ]

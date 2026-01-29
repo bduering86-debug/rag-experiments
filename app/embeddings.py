@@ -6,30 +6,51 @@ from bin.config import EmbeddingConfig
 
 class Embeddings(LangChainEmbeddings):
     """
-    Embedding-Wrapper.
-    Nutzt /v1/embeddings mit Key 'input' und 'model'.
+    Embedding-Wrapper für Ollama.
+    Unterstützt beide Endpoints:
+    - /api/embed (nativer Ollama, einzelnes 'input' String pro Request)
+    - /v1/embeddings (OpenAI-kompatibel, 'input' kann Liste sein)
     """
 
     def __init__(self, config: EmbeddingConfig | None = None):
         self.config = config or EmbeddingConfig()
-        self.batch_size = 32  # Kleinere Batches zum Server senden
+        self.batch_size = 32 if self._is_openai_compatible() else 1  # Batching nur für v1/embeddings
+        
+    def _is_openai_compatible(self) -> bool:
+        """Prüfe ob URL den OpenAI-kompatiblen Endpoint nutzt."""
+        return "/v1/embeddings" in self.config.base_url
 
     def _embed(self, texts: List[str]) -> List[List[float]]:
-        """Sende Texts in kleineren Batches zum Embeddings-Server."""
+        """Sende Texts zu Ollama (mit automatischer Endpoint-Erkennung)."""
         all_embeddings = []
         
-        # Teile Texts in kleinere Batches auf
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i:i + self.batch_size]
-            resp = requests.post(
-                self.config.base_url,
-                json={"input": batch, "model": self.config.model},
-                timeout=120,
-            )
-            resp.raise_for_status()
-            data = resp.json()["data"]
-            batch_embeddings = [item["embedding"] for item in data]
-            all_embeddings.extend(batch_embeddings)
+        if self._is_openai_compatible():
+            # OpenAI-kompatibel: Batch-Support mit "input" als Liste
+            for i in range(0, len(texts), self.batch_size):
+                batch = texts[i:i + self.batch_size]
+                resp = requests.post(
+                    self.config.base_url,
+                    json={"model": self.config.model, "input": batch},
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                batch_embeddings = data.get("embeddings", [])
+                all_embeddings.extend(batch_embeddings)
+        else:
+            # Nativer Ollama /api/embed: "input" als String, kein Batch-Support
+            # Response: {"embeddings": [[float, float, ...]]} - 2D-Array mit einem Element
+            for text in texts:
+                resp = requests.post(
+                    self.config.base_url,
+                    json={"model": self.config.model, "input": text},
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                # /api/embed gibt {"embeddings": [[...]]} zurück, wir wollen nur das erste Element
+                embedding = data.get("embeddings", [[]])[0]
+                all_embeddings.append(embedding)
         
         return all_embeddings
 
