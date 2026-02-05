@@ -57,6 +57,4 @@ Files to inspect for details
 - `app/chunking.py`
 - `README.md`
 
-Contact
 
-If you want me to produce a shorter developer README or pin dependencies in `requirements.txt`, tell me and I'll add it.

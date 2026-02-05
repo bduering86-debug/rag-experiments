@@ -33,6 +33,7 @@ class QdrantConfig:
 class EmbeddingConfig:
     # Ollama Embedding endpoint - Werte müssen in .env gesetzt sein
     base_url: str = os.getenv("EMBEDDING_URL")
+    fallback_url: str = os.getenv("EMBEDDING_FALLBACK_URL") or ""  # Optional: Fallback-Server
     model: str = os.getenv("EMBEDDING_MODEL")
     dim: int = int(os.getenv("EMBEDDING_DIM") or "0")
     
@@ -58,6 +59,9 @@ class OllamaConfig:
     #Standardmodell
     #model: str = os.getenv("OLLAMA_MODEL") or ""
     threads: int = int(os.getenv("OLLAMA_THREADS") or "8")
+    threads_low: int = int(os.getenv("OLLAMA_THREADS_LOW") or "4")
+    threads_mid: int = int(os.getenv("OLLAMA_THREADS_MID") or "8")
+    threads_high: int = int(os.getenv("OLLAMA_THREADS_HIGH") or "16")
     
 @dataclass
 class DataConfig:

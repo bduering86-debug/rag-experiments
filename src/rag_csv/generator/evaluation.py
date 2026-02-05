@@ -19,22 +19,53 @@ Requirements:
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
+import os
 import re
+import sys
 import time
 import datetime as dt
 from typing import Dict, Any, List, Optional, Tuple
 
 import requests
 
+# Add src directory to path to allow imports when running script directly
+script_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.dirname(os.path.dirname(script_dir))
+project_root = os.path.dirname(src_dir)  # Go up one more level to project root
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+from rag_csv.config.settings import OllamaConfig
+
 
 # -----------------------------
 # CONFIG
 # -----------------------------
 
-OLLAMA_BASE_URL = "http://192.168.178.120:11434"  # <- set your Ollama VM host, e.g. http://10.0.0.50:11434
-OUT_CSV_PATH = "output/benchmarks/ollama_kb_benchmark_results.csv"
+# Initialize Ollama configuration from settings
+ollama_config = OllamaConfig()
+
+# Ollama Base URLs für verschiedene Ressourcen-Profile (aus .env)
+OLLAMA_URLS = {
+    "low": ollama_config.url_low_profile,
+    "mid": ollama_config.url_mid_profile,
+    "high": ollama_config.url_high_profile,
+}
+
+OLLAMA_THREAD_CONFIG = {
+    "low": ollama_config.threads_low,
+    "mid": ollama_config.threads_mid,
+    "high": ollama_config.threads_high,
+}
+
+# Default configuration
+CONFIG = "low"  # Change to "mid" or "high" as needed
+OLLAMA_BASE_URL = OLLAMA_URLS[CONFIG]
+OLLAMA_THREADS = OLLAMA_THREAD_CONFIG[CONFIG]
+OUT_CSV_PATH = os.path.join(project_root, "output", "benchmarks", f"ollama_kb_benchmark_results_{CONFIG}.csv")
 
 # Put your 10 models from your table here (exact Ollama model identifiers)
 MODELS: List[str] = [
@@ -47,16 +78,7 @@ MODELS: List[str] = [
     "phi3:3.8b-mini-4k-instruct-q4_K_M",
     "llama3.2:3b-instruct-q4_K_M",
     "qwen2.5:3b-instruct-q4_K_M",
-    "llama3.2:1b-instruct-q4_K_M",
-    "qwen2.5:1.5b-instruct-q4_K_M"
-]
-
-MODELS_: List[str] = [
-    "gemma2:9b",
-    "deepseek-r1:7b",
-    "mistral-nemo:12b",
-    "granite3.1-dense:8b",
-]
+    "llama3.2:1b-instruct-q4_K_M",]
 
 # Keep identical across models for comparability
 GEN_OPTIONS: Dict[str, Any] = {
@@ -218,10 +240,18 @@ def call_ollama_generate_stream(
     model: str,
     prompt: str,
     options: Dict[str, Any],
-    timeout_s: int,
+    timeout_s: int = 600,
+    threads: int = 4,
 ) -> Dict[str, Any]:
     url = base_url.rstrip("/") + "/api/generate"
-    payload = {"model": model, "prompt": prompt, "stream": True, "options": options}
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,
+        "options": options,
+        "keep_alive": 0,
+        "threads": threads,
+        }
 
     started = time.perf_counter()
     ttft_ms: Optional[float] = None
@@ -315,6 +345,10 @@ def call_ollama_generate_stream(
         "options": json.dumps(options, ensure_ascii=False),
     }
 
+    try:
+        requests.post(url, json=payload, timeout=timeout_s).raise_for_status()
+    except requests.RequestException:
+        pass
 
 # -----------------------------
 # HEURISTICS / REGEX CHECKS
@@ -585,6 +619,11 @@ CSV_FIELDS = [
 ]
 
 def append_row_csv(path: str, row: Dict[str, Any]) -> None:
+    # Create directory if it doesn't exist#*Ä'
+    directory = os.path.dirname(path)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+    
     file_exists = False
     try:
         with open(path, "r", encoding="utf-8"):
@@ -592,30 +631,71 @@ def append_row_csv(path: str, row: Dict[str, Any]) -> None:
     except FileNotFoundError:
         file_exists = False
 
+    # Format row: convert float/decimal values to use comma as decimal separator
+    formatted_row = {}
+    for k in CSV_FIELDS:
+        val = row.get(k)
+        if isinstance(val, float):
+            # Convert float to string with comma as decimal separator
+            formatted_row[k] = str(val).replace(".", ",")
+        else:
+            formatted_row[k] = val
+
     with open(path, "a", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        # Use semicolon as delimiter (standard for German Excel)
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, delimiter=";")
         if not file_exists:
             writer.writeheader()
-        writer.writerow({k: row.get(k) for k in CSV_FIELDS})
+        writer.writerow(formatted_row)
+
+
+def unload_model(base_url: str, model: str, timeout_s: int = 60) -> None:
+    """Unload a model from Ollama memory by sending empty prompt with keep_alive=0."""
+    try:
+        url = base_url.rstrip("/") + "/api/generate"
+        payload = {
+            "model": model,
+            "prompt": "",
+            "keep_alive": 0,
+            "stream": False
+        }
+        requests.post(url, json=payload, timeout=timeout_s).raise_for_status()
+    except requests.RequestException:
+        pass
 
 
 # -----------------------------
 # MAIN
 # -----------------------------
 
-def main() -> None:
-    print(f"Target Ollama: {OLLAMA_BASE_URL}")
-    print(f"Output CSV:    {OUT_CSV_PATH}")
+def main(config: str = "low") -> None:
+    # Set configuration based on argument
+    base_url = OLLAMA_URLS.get(config, OLLAMA_URLS["low"])
+    threads = OLLAMA_THREAD_CONFIG.get(config, OLLAMA_THREAD_CONFIG["low"])
+    csv_path = os.path.join(project_root, "output", "benchmarks", f"ollama_kb_benchmark_results_{config}.csv")
+    
+    print(f"Configuration: {config.upper()}")
+    print(f"Target Ollama: {base_url}")
+    print(f"Threads:       {threads}")
+    print(f"Output CSV:    {csv_path}")
     print(f"Models ({len(MODELS)}): {', '.join(MODELS)}")
+    print("-" * 80)
+    
+    # Cleanup: unload all models before starting benchmark
+    print("Preloading cleanup: unloading any previously loaded models...")
+    for model in MODELS:
+        unload_model(base_url, model, timeout_s=30)
+    time.sleep(2)
     print("-" * 80)
 
     for i, model in enumerate(MODELS, start=1):
         print(f"[{i}/{len(MODELS)}] Testing model: {model}")
 
         base = call_ollama_generate_stream(
-            base_url=OLLAMA_BASE_URL,
+            base_url=base_url,
             model=model,
             prompt=FULL_PROMPT,
+            threads=threads,
             options=GEN_OPTIONS,
             timeout_s=TIMEOUT_S,
         )
@@ -638,7 +718,7 @@ def main() -> None:
             "manual_review": "",  # keep empty
         }
 
-        append_row_csv(OUT_CSV_PATH, row)
+        append_row_csv(csv_path, row)
 
         status = "OK" if not row["error"] else f"ERROR: {row['error']}"
         print(
@@ -667,9 +747,25 @@ def main() -> None:
         if not row["only_expected_headings"]:
             print("     note=unexpected/duplicate heading lines detected (heuristic)")
         print("-" * 80)
+        # Neben keep_alive = 0 zusätzlich noch das Modell durch leeren Prompt unloaden
+        unload_model(base_url, model)
+        # kurz warten, damit Ollama Zeit hat, das Modell zu entladen
+        time.sleep(2)
 
     print("Done.")
 
 
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Ollama Model Benchmark for ITSM/Helpdesk KB Article Generation"
+    )
+    parser.add_argument(
+        "--config",
+        choices=["low", "mid", "high"],
+        default="low",
+        help=f"Server configuration (default: low). Low={ollama_config.threads_low} threads, Mid={ollama_config.threads_mid} threads, High={ollama_config.threads_high} threads"
+    )
+    args = parser.parse_args()
+    main(config=args.config)
+
