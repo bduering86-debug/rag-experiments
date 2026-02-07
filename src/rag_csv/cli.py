@@ -14,15 +14,13 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from rag_csv.config.settings import DataConfig, QdrantConfig, EmbeddingConfig
 from rag_csv.core.retrieval import search_collection
-from rag_csv.ingest.incidents import ingest_incidents
-from rag_csv.ingest.kb import ingest_kb
+from rag_csv.ingest.incidents import main as ingest_incidents_main
+from rag_csv.ingest.kb import main as ingest_kb_main
 from rag_csv.ingest.setup import setup_collections
 
 
 def query_cmd(args):
     """Query Command: Suche in Incidents oder KB."""
-    config = QdrantConfig()
-    
     query = args.query
     collection = args.collection or "incidents"
     top_k = args.top_k
@@ -31,13 +29,12 @@ def query_cmd(args):
         query=query,
         collection=collection,
         top_k=top_k,
-        config=config,
     )
     
-    for i, (doc, score) in enumerate(results, 1):
-        print(f"\n{i}. Score: {score:.4f}")
-        print(f"Content: {doc.page_content[:200]}...")
-        print(f"Metadata: {doc.metadata}")
+    for i, hit in enumerate(results, 1):
+        print(f"\n{i}. Score: {hit.score:.4f}")
+        print(f"Content: {hit.text[:200]}...")
+        print(f"Metadata: {hit.metadata}")
 
 
 def ingest_cmd(args):
@@ -46,12 +43,12 @@ def ingest_cmd(args):
     
     if args.source == "incidents" or args.source == "all":
         print("🔄 Ingestion of incidents...")
-        ingest_incidents(config)
+        ingest_incidents_main()
         print("✅ Incidents ingested")
     
     if args.source == "kb" or args.source == "all":
         print("🔄 Ingestion of KB...")
-        ingest_kb(config)
+        ingest_kb_main()
         print("✅ KB ingested")
 
 

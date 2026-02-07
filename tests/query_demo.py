@@ -1,12 +1,12 @@
 import os, textwrap, requests
 from langchain_core.documents import Document
-from .vectorstore import get_vectorstore
+from rag_csv.core.vectorstore import get_vectorstore
 from rag_csv.config.settings import OllamaConfig
 
 ollama_cfg = OllamaConfig()
 
 
-def retrieve_incidents_and_kb(query: str, k_inc: int = 3, k_kb: int = 3) -> list[Document]:
+def retrieve_incidents_and_kb(query: str, k_inc: int = 3, k_kb: int = 5) -> list[Document]:
     vs_inc = get_vectorstore("incidents")
     vs_kb = get_vectorstore("kb")
 
@@ -31,31 +31,41 @@ def build_prompt(query: str, docs: list[Document]) -> str:
     context = "\n\n-----\n\n".join(context_blocks)
 
     prompt = textwrap.dedent(f"""
-    Du bist ein IT-Support-Assistent in einem Incident-Management-Kontext.
-    Nutze ausschließlich den folgenden Kontext (Incidents & KB-Artikel),
-    um die Frage zu beantworten. Wenn dir Informationen fehlen, sage das.
+    Du bist ein IT-Support-Spezialist. Analysiere das gemeldete Problem und erstelle eine sachliche, strukturierte Lösung.
 
-    Kontext:
+    Kontext aus Wissensdatenbank und früheren Incidents:
     {context}
 
-    Frage: {query}
+    Gemeldetes Problem: {query}
 
-    Antwort (präzise, auf Deutsch, mit konkreten Handlungsschritten):
+    Erstelle eine präzise Problemanalyse und Lösungsanleitung nach folgendem Format:
+
+    **Problemanalyse:**
+    - Beschreibe kurz das identifizierte Problem
+
+    **Lösungsschritte:**
+    1. [Erster konkreter Handlungsschritt]
+    2. [Zweiter konkreter Handlungsschritt]
+    3. [...]
+
+    **Relevante KB-Artikel:** [Gib die KB-IDs an, falls vorhanden]
+
+    Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontext. Bei fehlenden Informationen weise darauf hin.
     """).strip()
 
     return prompt
 
 
-def ask_ollama(prompt: str) -> str:
+def ask_ollama(prompt: str, model: str = "llama3.1:8b-instruct-q4_K_M") -> str:
     if not ollama_cfg.url:
         raise RuntimeError("OLLAMA_URL ist in .env nicht gesetzt")
 
     resp = requests.post(
-        ollama_cfg.url,
+        ollama_cfg.url + "/api/generate",
         json={
-            "model": ollama_cfg.model,
+            "model": model,
             "prompt": prompt,
-            "options": {"num_gpu": 0, "num_thread": ollama_cfg.threads, "num_ctx": 4096},
+            "options": {"num_ctx": 4096},
             "stream": False,
         },
         timeout=600,

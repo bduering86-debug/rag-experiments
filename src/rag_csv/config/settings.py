@@ -78,13 +78,21 @@ class DataConfig:
         # Falls absolute Pfade angegeben wurden, diese direkt nutzen
         if self.incident_csv.startswith("/"):
             return self.incident_csv
-        return os.path.join(self.data_dir, self.incident_csv)
+        # Immer absoluten Pfad verwenden basierend auf BASE_DIR
+        path = os.path.join(self.data_dir, self.incident_csv)
+        if not os.path.isabs(path):
+            path = os.path.join(BASE_DIR, path)
+        return path
 
     @property
     def kb_path(self):
         if self.kb_csv.startswith("/"):
             return self.kb_csv
-        return os.path.join(self.data_dir, self.kb_csv)
+        # Immer absoluten Pfad verwenden basierend auf BASE_DIR
+        path = os.path.join(self.data_dir, self.kb_csv)
+        if not os.path.isabs(path):
+            path = os.path.join(BASE_DIR, path)
+        return path
 
 @dataclass
 class GeneratorConfig:
