@@ -83,20 +83,29 @@ def load_kb_csv(path: str) -> List[Document]:
     for row in iterator:
         kb_id = str(row.get("kb_id", ""))
         title = str(row.get("title", ""))
-        problem = str(row.get("problem", ""))
-        symptoms = str(row.get("symptoms", ""))
-        root_cause = str(row.get("root_cause", ""))
-        resolution_steps = str(row.get("resolution_steps", ""))
-        validation = str(row.get("validation", ""))
+        
+        # Verwende kb_fulltext wenn verfügbar, sonst baue Content zusammen
+        kb_fulltext = str(row.get("kb_fulltext", ""))
+        
+        if kb_fulltext and kb_fulltext != "nan" and kb_fulltext.strip():
+            # Nutze das strukturierte kb_fulltext Feld direkt
+            page_content = kb_fulltext
+        else:
+            # Fallback: Baue Content aus Einzelfeldern
+            problem = str(row.get("problem", ""))
+            symptoms = str(row.get("symptoms", ""))
+            root_cause = str(row.get("root_cause", ""))
+            resolution_steps = str(row.get("resolution_steps", ""))
+            validation = str(row.get("validation", ""))
 
-        page_content = (
-            f"KB-Artikel {kb_id}: {title}\n\n"
-            f"Problem:\n{problem}\n\n"
-            f"Symptome:\n{symptoms}\n\n"
-            f"Ursache:\n{root_cause}\n\n"
-            f"Lösungsschritte:\n{resolution_steps}\n\n"
-            f"Validierung:\n{validation}"
-        )
+            page_content = (
+                f"KB-Artikel {kb_id}: {title}\n\n"
+                f"Problem:\n{problem}\n\n"
+                f"Symptome:\n{symptoms}\n\n"
+                f"Ursache:\n{root_cause}\n\n"
+                f"Lösungsschritte:\n{resolution_steps}\n\n"
+                f"Validierung:\n{validation}"
+            )
 
         metadata = {
             "source": "kb",

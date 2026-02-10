@@ -3,12 +3,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Optional, Dict, Any
+import os
 
 from langchain_core.documents import Document
 from rag_csv.config.logging import get_logger
 from rag_csv.core.vectorstore import get_vectorstore
 
 logger = get_logger(__name__)
+
+# Lazy-load Reranker (nur wenn aktiviert)
+_reranker = None
+
+def _get_reranker():
+    """Lazy-loading des Rerankers."""
+    global _reranker
+    if _reranker is None:
+        from rag_csv.core.reranking import CrossEncoderReranker
+        model = os.getenv("RERANKING_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+        _reranker = CrossEncoderReranker(model_name=model)
+    return _reranker
 
 
 @dataclass
@@ -60,22 +73,67 @@ def search(
     use_incidents: bool = True,
     preview_chars: int = 500,
     merge: bool = True,
+    rerank: Optional[bool] = None,
 ) -> List[SearchHit]:
     """
     Führt Retrieval auf KB und/oder Incidents aus.
     Wenn merge=True, werden Treffer zusammengeführt und nach score sortiert.
+    
+    Args:
+        query: Suchquery
+        top_k: Anzahl der finalen Ergebnisse
+        use_kb: KB durchsuchen
+        use_incidents: Incidents durchsuchen
+        preview_chars: Max. Zeichen im Text-Preview
+        merge: Ergebnisse mergen und sortieren
+        rerank: Cross-Encoder Reranking (None=aus .env, True/False=override)
+        
+    Returns:
+        Liste von SearchHits
     """
+    # Reranking-Einstellung aus .env wenn nicht explizit angegeben
+    if rerank is None:
+        rerank = os.getenv("USE_RERANKING", "false").lower() == "true"
+    
+    # Wenn Reranking aktiv: hole mehr Kandidaten
+    initial_k = top_k
+    if rerank:
+        multiplier = int(os.getenv("RERANKING_TOP_K_MULTIPLIER", "3"))
+        initial_k = top_k * multiplier
+        logger.debug("Reranking aktiviert - hole initial %d Dokumente (top_k=%d * %d)",
+                    initial_k, top_k, multiplier)
+    
     results: List[SearchHit] = []
 
     if use_kb:
-        results.extend(search_collection(query, "kb", top_k, preview_chars=preview_chars))
+        results.extend(search_collection(query, "kb", initial_k, preview_chars=preview_chars))
 
     if use_incidents:
-        results.extend(search_collection(query, "incident", top_k, preview_chars=preview_chars))
+        results.extend(search_collection(query, "incident", initial_k, preview_chars=preview_chars))
 
     if merge:
         # Qdrant/LangChain Score ist i.d.R. distance -> kleiner ist besser
         results.sort(key=lambda x: x.score)
+        # Limitiere auf initial_k Dokumente nach Merge
+        results = results[:initial_k]
+    
+    # Optional: Reranking mit Cross-Encoder
+    if rerank and results:
+        try:
+            reranker = _get_reranker()
+            if reranker.enabled:
+                logger.debug("Starte Reranking von %d Dokumenten auf Top-%d", len(results), top_k)
+                results = reranker.rerank(query, results, top_k)
+                logger.debug("Reranking abgeschlossen")
+            else:
+                # Fallback: normale Top-K Limitierung
+                results = results[:top_k]
+        except Exception as e:
+            logger.warning("Reranking fehlgeschlagen: %s - verwende Original-Ranking", e)
+            results = results[:top_k]
+    elif not rerank:
+        # Ohne Reranking: normale Top-K Limitierung
+        results = results[:top_k]
 
     return results
 

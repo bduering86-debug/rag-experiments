@@ -32,3 +32,12 @@ output/**/*.json
 output/**/*.log
 output/**/ollama_calls.csv
 !output/README.md
+
+scripts/
+tests/
+docs/
+
+run_tests.py
+
+debug_*
+

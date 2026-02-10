@@ -62,6 +62,21 @@ class OllamaConfig:
     threads_low: int = int(os.getenv("OLLAMA_THREADS_LOW") or "4")
     threads_mid: int = int(os.getenv("OLLAMA_THREADS_MID") or "8")
     threads_high: int = int(os.getenv("OLLAMA_THREADS_HIGH") or "16")
+    num_ctx: int = int(os.getenv("OLLAMA_NUM_CTX") or "4096")
+
+
+@dataclass
+class EvaluationConfig:
+    """Konfiguration für RAG Evaluation."""
+    top_k: int = int(os.getenv("TOP_K") or "10")
+    runs_per_testcase: int = int(os.getenv("RUNS_PER_TESTCASE") or "3")
+    # LLM Judge Konfiguration
+    use_llm_judge: bool = _str_to_bool(os.getenv("USE_LLM_JUDGE"), False)
+    llm_judge_api_url: str = os.getenv("LLM_JUDGE_API_URL") or ""
+    llm_judge_api_key: str = os.getenv("LLM_JUDGE_API_KEY") or ""
+    llm_judge_model: str = os.getenv("LLM_JUDGE_MODEL") or "gpt-4o-mini"
+    llm_judge_temperature: float = float(os.getenv("LLM_JUDGE_TEMPERATURE") or "0.1")
+    llm_judge_max_tokens: int = int(os.getenv("LLM_JUDGE_MAX_TOKENS") or "1000")
     
 @dataclass
 class DataConfig:
