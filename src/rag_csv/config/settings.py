@@ -56,6 +56,13 @@ class OllamaConfig:
     url_ultra_profile: str = os.getenv("OLLAMA_URL_ULTRA_PROFILE") or ""
     url_test: str = os.getenv("OLLAMA_URL_TEST") or ""
 
+    # Metrics Service Endpoints
+    metrics_low_endpoint: str = os.getenv("OLLAMA_URL_LOW_METRICS_SERVICE_ENDPOINT") or ""
+    metrics_mid_endpoint: str = os.getenv("OLLAMA_URL_MID_METRICS_SERVICE_ENDPOINT") or ""
+    metrics_high_endpoint: str = os.getenv("OLLAMA_URL_HIGH_METRICS_SERVICE_ENDPOINT") or ""
+    metrics_ultra_endpoint: str = os.getenv("OLLAMA_URL_ULTRA_METRICS_SERVICE_ENDPOINT") or ""
+    metrics_interval: int = int(os.getenv("OLLAMA_METRICS_SERVICE_INTERVAL") or "1")
+
     #Standardmodell
     #model: str = os.getenv("OLLAMA_MODEL") or ""
     threads: int = int(os.getenv("OLLAMA_THREADS") or "8")
@@ -77,6 +84,11 @@ class EvaluationConfig:
     llm_judge_model: str = os.getenv("LLM_JUDGE_MODEL") or "gpt-4o-mini"
     llm_judge_temperature: float = float(os.getenv("LLM_JUDGE_TEMPERATURE") or "0.1")
     llm_judge_max_tokens: int = int(os.getenv("LLM_JUDGE_MAX_TOKENS") or "1000")
+
+@dataclass
+class RetrievalConfig:
+    """Konfiguration für Retrieval."""
+    retrieve_k_chunks_multiplier: int = int(os.getenv("RETRIEVE_K_CHUNKS_MULTIPLIER") or "4")
     
 @dataclass
 class DataConfig:

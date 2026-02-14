@@ -4,6 +4,7 @@ Konfiguration, Logging und Textverarbeitung.
 
 from .settings import (
     QdrantConfig,
+    RetrievalConfig,
     EmbeddingConfig,
     OllamaConfig,
     DataConfig,
@@ -15,6 +16,7 @@ from .text import safe_parse_level, safe_split
 
 __all__ = [
     "QdrantConfig",
+    "RetrievalConfig",
     "EmbeddingConfig",
     "OllamaConfig",
     "DataConfig",

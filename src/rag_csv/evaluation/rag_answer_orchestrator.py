@@ -14,11 +14,10 @@ import os
 import csv
 import time
 import requests
-from typing import List, Dict, Any, Literal
+import uuid
+from typing import List, Dict, Any, Literal, Optional
 from pathlib import Path
 from datetime import datetime
-from collections import defaultdict
-import statistics
 
 from rag_csv.config.logging import get_logger
 from rag_csv.config.settings import DataConfig, OllamaConfig, EvaluationConfig
@@ -29,6 +28,10 @@ from rag_csv.utils.RecallTopK import RecallTopK
 from rag_csv.utils.latency import LatencyTracker
 from rag_csv.utils.tokens import TokenTracker
 from rag_csv.utils.llm_judge import LLMJudge
+from rag_csv.utils.token_score import TokenScoreCalculator
+from rag_csv.utils.latency_score import LatencyScoreCalculator
+from rag_csv.utils.system_metrics_logger import SystemMetricsLogger
+from rag_csv.utils.retrieval_score import RetrievalScoreCalculator
 
 logger = get_logger(__name__)
 
@@ -111,6 +114,7 @@ class RAGAnswerOrchestrator:
         # Metriken initialisieren
         self.ndcg_metric = nDCGTopK(k=self.top_k)
         self.recall_metric = RecallTopK(k=self.top_k)
+        self.retrieval_score_calculator = RetrievalScoreCalculator()
         
         # LLM Judge initialisieren (optional)
         self.use_llm_judge = _eval_config.use_llm_judge
@@ -128,6 +132,10 @@ class RAGAnswerOrchestrator:
             except Exception as e:
                 logger.warning("LLM Judge konnte nicht initialisiert werden: %s", e)
                 self.use_llm_judge = False
+        
+        # Log directory für Testcase-Details
+        self.log_dir = Path("output/logs")
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info("RAG Answer Orchestrator initialisiert")
         logger.info("  - Top-K: %d", self.top_k)
@@ -413,111 +421,132 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         Returns:
             Dict mit Evaluation-Ergebnissen
         """
-        # Gesamtzeit messen (Wall-Clock)
-        wall_start = time.time()
+        # Generiere trace_id für diesen Testfall
+        trace_id = str(uuid.uuid4())
         
-        logger.info("Evaluiere Testcase %s - Profile: %s - Model: %s - Run: %d",
-                   testcase.get("test_case_id"), profile, model, run)
-        
-        # Latenz-Tracking initialisieren
-        latency_tracker = LatencyTracker()
-        latency_tracker.start_total()
-        
-        # 1. Retrieval
-        latency_tracker.start_retrieval()
-        hits = self.retrieve_for_testcase(testcase)
-        latency_tracker.end_retrieval()
-        
-        # 2. Prompt erstellen
-        prompt = self.build_prompt(testcase, hits)
-        
-        # 3. Ollama anfragen
-        url = self.get_ollama_url_for_profile(profile)
-        threads = self.get_threads_for_profile(profile)
-        
-        latency_tracker.start_llm()
-        ollama_result = self.ask_ollama(prompt, model, url, threads)
-        latency_tracker.end_llm()
-        
-        # 4. Metriken berechnen
-        gold_kb_id = testcase.get("gold_kb_id", "")
-        metrics = self.compute_metrics(hits, gold_kb_id)
-        
-        # Token-Metriken extrahieren
-        token_tracker = TokenTracker.from_ollama_response(
-            ollama_result.get("ollama_data", {})
+        # Starte System Metrics Logging (speichert in output/metrics/[experiment_id])
+        metrics_output_dir = Path("output/metrics") / self.experiment_id
+        metrics_logger = SystemMetricsLogger(
+            experiment_id=self.experiment_id,
+            output_dir=str(metrics_output_dir),
+            profile=profile
         )
-        token_metrics = token_tracker.get_metrics()
+        metrics_logger.start_logging(trace_id)
         
-        # Latenz-Messungen abschließen
-        latency_tracker.end_total()
-        latency_metrics = latency_tracker.get_metrics()
+        try:
+            # Gesamtzeit messen (Wall-Clock)
+            wall_start = time.time()
+            
+            logger.info("Evaluiere Testcase %s - Profile: %s - Model: %s - Run: %d (trace_id: %s)",
+                       testcase.get("test_case_id"), profile, model, run, trace_id)
         
-        # 5. LLM Judge Evaluation (optional)
-        judge_metrics = {}
-        if self.use_llm_judge and self.llm_judge and ollama_result["success"]:
-            try:
-                # Kontext aus Hits extrahieren
-                context = "\n\n".join([
-                    f"[{hit.collection.upper()}] {hit.text}"
-                    for hit in hits[:3]  # Nur erste 3 für Context
-                ])
-                
-                judge_result = self.llm_judge.evaluate(
-                    ticket_description=testcase.get("ticket_description", ""),
-                    context=context,
-                    generated_answer=ollama_result["response"]
-                )
-                
-                judge_metrics = {
-                    "judge_faithfulness": judge_result.get("faithfulness"),
-                    "judge_relevance": judge_result.get("relevance"),
-                    "judge_completeness": judge_result.get("completeness"),
-                    "judge_fluency": judge_result.get("fluency"),
-                    "judge_raw_score": judge_result.get("raw_score"),
-                    "judge_normalized_score": judge_result.get("normalized_score"),
-                    "judge_success": judge_result.get("success"),
-                    "judge_error": judge_result.get("error")
-                }
-                
-                if judge_result.get("success"):
-                    logger.info("  ✓ Judge Score: %.4f (F=%.1f, R=%.1f, C=%.1f, L=%.1f)",
-                               judge_metrics["judge_normalized_score"],
-                               judge_metrics["judge_faithfulness"],
-                               judge_metrics["judge_relevance"],
-                               judge_metrics["judge_completeness"],
-                               judge_metrics["judge_fluency"])
-                else:
-                    logger.warning("  ✗ Judge Evaluation fehlgeschlagen: %s", judge_result.get("error"))
+            # Latenz-Tracking initialisieren
+            latency_tracker = LatencyTracker()
+            latency_tracker.start_total()
+            
+            # 1. Retrieval
+            latency_tracker.start_retrieval()
+            hits = self.retrieve_for_testcase(testcase)
+            latency_tracker.end_retrieval()
+            
+            # 2. Prompt erstellen
+            prompt = self.build_prompt(testcase, hits)
+            
+            # 3. Ollama anfragen
+            url = self.get_ollama_url_for_profile(profile)
+            threads = self.get_threads_for_profile(profile)
+            
+            latency_tracker.start_llm()
+            ollama_result = self.ask_ollama(prompt, model, url, threads)
+            latency_tracker.end_llm()
+            
+            # 4. Metriken berechnen
+            gold_kb_id = testcase.get("gold_kb_id", "")
+            metrics = self.compute_metrics(hits, gold_kb_id)
+            
+            # Token-Metriken extrahieren
+            token_tracker = TokenTracker.from_ollama_response(
+                ollama_result.get("ollama_data", {})
+            )
+            token_metrics = token_tracker.get_metrics()
+            
+            # Latenz-Messungen abschließen
+            latency_tracker.end_total()
+            latency_metrics = latency_tracker.get_metrics()
+            
+            # 5. Retrieval Score berechnen
+            retrieval_score = self.retrieval_score_calculator.calculate(
+                recall=metrics.get("recall@k"),
+                ndcg=metrics.get("ndcg@k")
+            )
+            
+            # 6. LLM Judge Evaluation (optional)
+            judge_metrics = {}
+            judge_result = None  # Initialize judge_result
+            if self.use_llm_judge and self.llm_judge and ollama_result["success"]:
+                try:
+                    # Kontext aus Hits extrahieren
+                    context = "\n\n".join([
+                        f"[{hit.collection.upper()}] {hit.text}"
+                        for hit in hits[:3]  # Nur erste 3 für Context
+                    ])
                     
-            except Exception as e:
-                logger.error("Fehler bei LLM Judge Evaluation: %s", e)
-                judge_metrics = {
-                    "judge_faithfulness": None,
-                    "judge_relevance": None,
-                    "judge_completeness": None,
-                    "judge_fluency": None,
-                    "judge_raw_score": None,
-                    "judge_normalized_score": None,
-                    "judge_success": False,
-                    "judge_error": str(e)
-                }
-        
-        # Gesamtzeit berechnen (Wall-Clock)
-        total_wall_time = time.time() - wall_start
-        
-        # Judge Feedback extrahieren (falls vorhanden)
-        judge_feedback = ""
-        if judge_result and judge_result.get("success"):
-            judge_feedback = judge_result.get("feedback", "")
-        
-        # 6. Ergebnis zusammenstellen
-        result = {
-            "experiment_id": self.experiment_id,
-            "test_case_id": testcase.get("test_case_id"),
-            "profile": profile,
-            "model": model,
-            "repetition": run,
+                    judge_result = self.llm_judge.evaluate(
+                        ticket_description=testcase.get("ticket_description", ""),
+                        context=context,
+                        generated_answer=ollama_result["response"]
+                    )
+                    
+                    judge_metrics = {
+                        "judge_faithfulness": judge_result.get("faithfulness"),
+                        "judge_relevance": judge_result.get("relevance"),
+                        "judge_completeness": judge_result.get("completeness"),
+                        "judge_fluency": judge_result.get("fluency"),
+                        "judge_raw_score": judge_result.get("raw_score"),
+                        "judge_normalized_score": judge_result.get("normalized_score"),
+                        "judge_success": judge_result.get("success"),
+                        "judge_error": judge_result.get("error")
+                    }
+                    
+                    if judge_result.get("success"):
+                        logger.info("  ✓ Judge Score: %.4f (F=%.1f, R=%.1f, C=%.1f, L=%.1f)",
+                                   judge_metrics["judge_normalized_score"],
+                                   judge_metrics["judge_faithfulness"],
+                                   judge_metrics["judge_relevance"],
+                                   judge_metrics["judge_completeness"],
+                                   judge_metrics["judge_fluency"])
+                    else:
+                        logger.warning("  ✗ Judge Evaluation fehlgeschlagen: %s", judge_result.get("error"))
+                        
+                except Exception as e:
+                    logger.error("Fehler bei LLM Judge Evaluation: %s", e)
+                    judge_metrics = {
+                        "judge_faithfulness": None,
+                        "judge_relevance": None,
+                        "judge_completeness": None,
+                        "judge_fluency": None,
+                        "judge_raw_score": None,
+                        "judge_normalized_score": None,
+                        "judge_success": False,
+                        "judge_error": str(e)
+                    }
+            
+            # Gesamtzeit berechnen (Wall-Clock)
+            total_wall_time = time.time() - wall_start
+            
+            # Judge Feedback extrahieren (falls vorhanden)
+            judge_feedback = ""
+            if judge_result and judge_result.get("success"):
+                judge_feedback = judge_result.get("feedback", "")
+            
+            # 7. Ergebnis zusammenstellen
+            result = {
+                "experiment_id": self.experiment_id,
+                "trace_id": trace_id,
+                "test_case_id": testcase.get("test_case_id"),
+                "profile": profile,
+                "model": model,
+                "repetition": run,
             "category": testcase.get("category"),
             "service": testcase.get("service"),
             "difficulty_level": testcase.get("difficulty_level"),
@@ -531,41 +560,128 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             "prompt": prompt,  # Vollständiger Prompt für CSV
             "llm_response": ollama_result["response"],  # Vollständige LLM-Antwort für CSV
             "judge_feedback": judge_feedback,  # Vollständiges Judge-Feedback für CSV
+            "retrieval_score": retrieval_score,  # Kombinierter Retrieval Score
             **metrics,
             **latency_metrics,
             **token_metrics,
             **judge_metrics
-        }
+            }
+            
+            logger.info("  ✓ nDCG@%d: %.4f | Recall@%d: %.4f | Gold in Top-K: %s",
+                       self.top_k, metrics["ndcg@k"],
+                       self.top_k, metrics["recall@k"],
+                       metrics["gold_in_topk"])
+            logger.info("  ✓ Latency: %.2fs (Retrieval: %.2fs, LLM: %.2fs)",
+                       latency_metrics["total_latency"] or 0,
+                       latency_metrics["retrieval_duration"] or 0,
+                       latency_metrics["llm_duration"] or 0)
+            logger.info("  ✓ Total Wall Time: %.2fs (inkl. Judge & Overhead)", total_wall_time)
+            logger.info("  ✓ Tokens: %d prompt + %d generated = %d total | %.1f tok/s",
+                       token_metrics["prompt_tokens"] or 0,
+                       token_metrics["generated_tokens"] or 0,
+                       token_metrics["total_tokens"] or 0,
+                       token_metrics["tokens_per_second"] or 0)
+            
+            # Verkürzte LLM-Antwort loggen
+            response_preview = ollama_result["response"][:150] + "..." if len(ollama_result["response"]) > 150 else ollama_result["response"]
+            logger.info("  ✓ LLM Response: %s", response_preview.replace("\n", " "))
+            
+            # Judge-Ergebnis loggen (falls vorhanden)
+            if judge_metrics.get("judge_success"):
+                logger.info("  ✓ Judge: F=%.1f R=%.1f C=%.1f L=%.1f → Score=%.3f",
+                           judge_metrics["judge_faithfulness"] or 0,
+                           judge_metrics["judge_relevance"] or 0,
+                           judge_metrics["judge_completeness"] or 0,
+                           judge_metrics["judge_fluency"] or 0,
+                           judge_metrics["judge_normalized_score"] or 0)
+            
+            return result
         
-        logger.info("  ✓ nDCG@%d: %.4f | Recall@%d: %.4f | Gold in Top-K: %s",
-                   self.top_k, metrics["ndcg@k"],
-                   self.top_k, metrics["recall@k"],
-                   metrics["gold_in_topk"])
-        logger.info("  ✓ Latency: %.2fs (Retrieval: %.2fs, LLM: %.2fs)",
-                   latency_metrics["total_latency"] or 0,
-                   latency_metrics["retrieval_duration"] or 0,
-                   latency_metrics["llm_duration"] or 0)
-        logger.info("  ✓ Total Wall Time: %.2fs (inkl. Judge & Overhead)", total_wall_time)
-        logger.info("  ✓ Tokens: %d prompt + %d generated = %d total | %.1f tok/s",
-                   token_metrics["prompt_tokens"] or 0,
-                   token_metrics["generated_tokens"] or 0,
-                   token_metrics["total_tokens"] or 0,
-                   token_metrics["tokens_per_second"] or 0)
+        finally:
+            # Stoppe System Metrics Logging
+            metrics_logger.stop_logging()
+    
+    def log_testcase_details(self, testcases: List[Dict[str, Any]]) -> str:
+        """
+        Loggt Testcase-Retrieval-Metriken in eine separate Log-Datei.
+        Format: TC-ID: gold=KB-ID | found=True/False | rank=N | score=X.XX | retrieve_k=K | in_retrieve_k=True/False | retrieve_rank=N
         
-        # Verkürzte LLM-Antwort loggen
-        response_preview = ollama_result["response"][:150] + "..." if len(ollama_result["response"]) > 150 else ollama_result["response"]
-        logger.info("  ✓ LLM Response: %s", response_preview.replace("\n", " "))
+        Args:
+            testcases: Liste der Testcase-Dictionaries
+            
+        Returns:
+            str: Pfad zur Log-Datei
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = self.log_dir / f"testcases_retrieval_{timestamp}.log"
         
-        # Judge-Ergebnis loggen (falls vorhanden)
-        if judge_metrics.get("judge_success"):
-            logger.info("  ✓ Judge: F=%.1f R=%.1f C=%.1f L=%.1f → Score=%.3f",
-                       judge_metrics["judge_faithfulness"] or 0,
-                       judge_metrics["judge_relevance"] or 0,
-                       judge_metrics["judge_completeness"] or 0,
-                       judge_metrics["judge_fluency"] or 0,
-                       judge_metrics["judge_normalized_score"] or 0)
+        logger.info("📊 Führe Retrieval-Tests für alle Testcases durch...")
         
-        return result
+        with open(log_file, 'w', encoding='utf-8') as f:
+            # Header schreiben
+            f.write(f"✓ {len(testcases)} Testcases Retrieval-Test\n")
+            f.write(f"Spalten: test_case_id, gold_kb_id, found, rank, score, retrieve_k, in_retrieve_k, retrieve_rank\n")
+            
+            success_count = 0
+            
+            # Für jeden Testcase Retrieval durchführen
+            for tc in testcases:
+                test_case_id = tc.get('test_case_id', 'N/A')
+                gold_kb_id = tc.get('gold_kb_id', '')
+                
+                # Testcase-Query zusammenstellen
+                query = f"{tc.get('ticket_title', '')} {tc.get('ticket_description', '')}"
+                
+                try:
+                    # Retrieval durchführen (größeres K für retrieve_rank)
+                    hits = search(query, top_k=40, preview_chars=0)
+                    
+                    # Gold KB suchen
+                    found = False
+                    rank = None
+                    score = None
+                    retrieve_rank = None
+                    
+                    # In Top-K suchen
+                    for i, hit in enumerate(hits[:self.top_k], 1):
+                        hit_kb_id = hit.metadata.get('kb_id') if hit.metadata else None
+                        if hit_kb_id == gold_kb_id:
+                            found = True
+                            rank = i
+                            score = hit.score
+                            break
+                    
+                    # In vollständigem Retrieval-Set suchen (für retrieve_rank)
+                    for i, hit in enumerate(hits, 1):
+                        hit_kb_id = hit.metadata.get('kb_id') if hit.metadata else None
+                        if hit_kb_id == gold_kb_id:
+                            retrieve_rank = i
+                            break
+                    
+                    in_retrieve_k = retrieve_rank is not None and retrieve_rank <= 40
+                    
+                    if found:
+                        success_count += 1
+                    
+                    # Log-Zeile schreiben
+                    f.write(f"{test_case_id}: gold={gold_kb_id or 'nan'} | "
+                           f"found={found} | "
+                           f"rank={rank} | "
+                           f"score={score if score else 'None'} | "
+                           f"retrieve_k={self.top_k} | "
+                           f"in_retrieve_k={in_retrieve_k} | "
+                           f"retrieve_rank={retrieve_rank}\n")
+                    
+                except Exception as e:
+                    logger.error(f"Fehler bei Retrieval für {test_case_id}: {e}")
+                    f.write(f"{test_case_id}: ERROR | {str(e)}\n")
+            
+            # Summary schreiben
+            f.write(f"\nSummary: found {success_count}/{len(testcases)} testcases with gold in top-{self.top_k}\n")
+        
+        logger.info("📝 Testcase-Retrieval-Metriken geloggt: %s", log_file)
+        logger.info(f"   ✓ {success_count}/{len(testcases)} Gold-KB in Top-{self.top_k} gefunden")
+        return str(log_file)
     
     def run_evaluation(
         self,
@@ -593,23 +709,34 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         testcases = df.to_dict(orient="records")
         logger.info("✓ %d Testfälle geladen", len(testcases))
         
+        # Testcase-Details loggen
+        self.log_testcase_details(testcases)
+        
         # Output-Datei vorbereiten
         date_str = datetime.now().strftime("%y%m%d")
         output_file = self._get_next_run_file(self.output_dir, date_str)
         
-        # CSV-Header schreiben
+        # CSV-Header schreiben (trace_id für Korrelation mit System-Metriken)
         fieldnames = [
             "experiment_id",
+            "trace_id",
             "profile",
             "model",
             "test_case_id",
             "repetition",
             "recall@k",
             "ndcg@k",
+            "retrieval_score",
+            "retrieval_interpretation",
             "latency_ms",
             "total_wall_time_ms",
             "tokens_per_s",
+            "llm_judge_f",
+            "llm_judge_r",
+            "llm_judge_c",
+            "llm_judge_l",
             "llm_judge_score",
+            "llm_judge_interpretation",
             "prompt_tokens",
             "completion_tokens",
             "error_flag",
@@ -624,7 +751,8 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
         
-        logger.info("💾 Speichere Ergebnisse kontinuierlich nach: %s", output_file)
+            logger.info("💾 Speichere Ergebnisse kontinuierlich nach: %s", output_file)
+        logger.info("📏 System-Metriken werden gespeichert in: output/metrics/%s/", self.experiment_id)
         
         # Ergebnis-Liste für Aggregation
         results = []
@@ -647,18 +775,38 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
                         results.append(result)
                         
                         # Sofort nach jedem Run speichern
+                        # Berechne Judge Interpretation falls Raw Score vorhanden
+                        judge_interpretation = None
+                        if result.get("judge_raw_score") is not None:
+                            from rag_csv.utils.answer_quality import AnswerQualityCalculator
+                            judge_interpretation = AnswerQualityCalculator.get_interpretation(result.get("judge_raw_score"))
+                        
+                        # Berechne Retrieval Interpretation
+                        retrieval_interpretation = self.retrieval_score_calculator.get_interpretation(
+                            recall=result.get("recall@k"),
+                            ndcg=result.get("ndcg@k")
+                        )
+                        
                         compact = {
                             "experiment_id": result.get("experiment_id"),
+                            "trace_id": result.get("trace_id"),
                             "profile": result.get("profile"),
                             "model": result.get("model"),
                             "test_case_id": result.get("test_case_id"),
                             "repetition": result.get("repetition"),
                             "recall@k": result.get("recall@k"),
                             "ndcg@k": result.get("ndcg@k"),
+                            "retrieval_score": result.get("retrieval_score"),
+                            "retrieval_interpretation": retrieval_interpretation,
                             "latency_ms": int(result.get("total_latency", 0) * 1000) if result.get("total_latency") else None,
                             "total_wall_time_ms": int(result.get("total_wall_time", 0) * 1000) if result.get("total_wall_time") else None,
                             "tokens_per_s": result.get("tokens_per_second"),
+                            "llm_judge_f": result.get("judge_faithfulness"),
+                            "llm_judge_r": result.get("judge_relevance"),
+                            "llm_judge_c": result.get("judge_completeness"),
+                            "llm_judge_l": result.get("judge_fluency"),
                             "llm_judge_score": result.get("judge_normalized_score"),
+                            "llm_judge_interpretation": judge_interpretation,
                             "prompt_tokens": result.get("prompt_tokens"),
                             "completion_tokens": result.get("generated_tokens"),
                             "error_flag": 0 if result.get("ollama_success") else 1,
@@ -678,97 +826,35 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         logger.info("Ergebnisse: %s", output_file)
         logger.info("Gesamt: %d Evaluationen", len(results))
         
-        # Aggregiere Ergebnisse nach Testfall × Modell × Profile
-        logger.info("\n📊 Aggregiere Ergebnisse...")
-        agg_file = self._aggregate_results(results)
-        logger.info("Aggregierte Ergebnisse: %s", agg_file)
+        # Berechne Token- und Latency-Scores
+        logger.info("\n📊 Berechne Performance-Scores...")
+        
+        token_calculator = TokenScoreCalculator()
+        token_scores = token_calculator.calculate_scores(results)
+        
+        latency_calculator = LatencyScoreCalculator()
+        latency_scores = latency_calculator.calculate_scores(results)
+        
+        # Speichere Scores in separater Datei
+        scores_file = self.output_dir / f"scores_{self.experiment_id}.csv"
+        all_models = set(list(token_scores.keys()) + list(latency_scores.keys()))
+        
+        with open(scores_file, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["model", "token_score", "latency_score"])
+            writer.writeheader()
+            
+            for model in sorted(all_models):
+                writer.writerow({
+                    "model": model,
+                    "token_score": token_scores.get(model),
+                    "latency_score": latency_scores.get(model)
+                })
+        
+        logger.info("Performance-Scores gespeichert: %s", scores_file)
         
         return str(output_file)
     
-    def _aggregate_results(self, results: List[Dict[str, Any]]) -> str:
-        """
-        Aggregiert Ergebnisse nach Testfall × Modell × Profile.
-        
-        Berechnet Mittelwerte und Mediane über alle Runs.
-        
-        Args:
-            results: Liste der Evaluation-Ergebnisse
-            
-        Returns:
-            str: Pfad zur aggregierten CSV
-        """
-        # Gruppiere nach (experiment_id, profile, model, test_case_id)
-        groups = defaultdict(list)
-        
-        for r in results:
-            key = (
-                r.get("experiment_id"),
-                r.get("profile"),
-                r.get("model"),
-                r.get("test_case_id")
-            )
-            groups[key].append(r)
-        
-        # Aggregiere jede Gruppe
-        aggregated = []
-        
-        for key, group_results in groups.items():
-            experiment_id, profile, model, test_case_id = key
-            
-            # Extrahiere Werte
-            recalls = [r.get("recall@k") for r in group_results if r.get("recall@k") is not None]
-            ndcgs = [r.get("ndcg@k") for r in group_results if r.get("ndcg@k") is not None]
-            latencies = [r.get("total_latency") for r in group_results if r.get("total_latency") is not None]
-            wall_times = [r.get("total_wall_time") for r in group_results if r.get("total_wall_time") is not None]
-            tokens_per_s = [r.get("tokens_per_second") for r in group_results if r.get("tokens_per_second") is not None]
-            judge_scores = [r.get("judge_normalized_score") for r in group_results if r.get("judge_normalized_score") is not None]
-            
-            # Berechne Statistiken
-            agg = {
-                "experiment_id": experiment_id,
-                "profile": profile,
-                "model": model,
-                "test_case_id": test_case_id,
-                "n_runs": len(group_results),
-                "recall_mean": statistics.mean(recalls) if recalls else None,
-                "ndcg_mean": statistics.mean(ndcgs) if ndcgs else None,
-                "latency_mean": statistics.mean(latencies) if latencies else None,
-                "latency_median": statistics.median(latencies) if latencies else None,
-                "wall_time_mean": statistics.mean(wall_times) if wall_times else None,
-                "wall_time_median": statistics.median(wall_times) if wall_times else None,
-                "tokens_s_mean": statistics.mean(tokens_per_s) if tokens_per_s else None,
-                "tokens_s_median": statistics.median(tokens_per_s) if tokens_per_s else None,
-                "judge_mean": statistics.mean(judge_scores) if judge_scores else None,
-            }
-            
-            aggregated.append(agg)
-        
-        # Speichere aggregierte Ergebnisse
-        output_file = self.output_dir / f"case_agg_{self.experiment_id}.csv"
-        
-        fieldnames = [
-            "experiment_id",
-            "profile",
-            "model",
-            "test_case_id",
-            "n_runs",
-            "recall_mean",
-            "ndcg_mean",
-            "latency_mean",
-            "latency_median",
-            "wall_time_mean",
-            "wall_time_median",
-            "tokens_s_mean",
-            "tokens_s_median",
-            "judge_mean"
-        ]
-        
-        with open(output_file, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(aggregated)
-        
-        return str(output_file)
+
 
 
 def main():

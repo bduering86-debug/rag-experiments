@@ -21,6 +21,7 @@ qdrant_data/
 
 # Logs
 logs/
+*.log
 
 # OS junk
 .DS_Store
@@ -37,7 +38,9 @@ scripts/
 tests/
 docs/
 
-run_tests.py
+run_*
 
 debug_*
+test_*
+demo_*
 
