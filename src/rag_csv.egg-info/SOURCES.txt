@@ -12,6 +12,12 @@ src/rag_csv.egg-info/top_level.txt
 tests/test_embeddings.py
 tests/test_error_analysis.py
 tests/test_generator.py
+tests/test_llm_judge.py
 tests/test_loaders.py
+tests/test_metrics_isolated.py
+tests/test_new_structure.py
+tests/test_orchestrator_single.py
+tests/test_reranking.py
 tests/test_retrieval.py
 tests/test_rq.py
+tests/test_topk_comparison.py

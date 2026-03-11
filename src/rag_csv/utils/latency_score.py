@@ -29,7 +29,11 @@ class LatencyScoreCalculator:
         """Initialisiert den LatencyScoreCalculator."""
         self.logger = get_logger(f"{__name__}.LatencyScoreCalculator")
     
-    def calculate_scores(self, results: List[Dict[str, Any]]) -> Dict[str, float]:
+    def calculate_scores(
+        self,
+        results: List[Dict[str, Any]],
+        group_by_keys: tuple[str, ...] = ("model",),
+    ) -> Dict[str | tuple[str, ...], float]:
         """
         Berechnet Latency-Scores für alle Modelle.
         
@@ -37,18 +41,34 @@ class LatencyScoreCalculator:
             results: Liste der Evaluation-Ergebnisse mit total_latency Werten
             
         Returns:
-            Dict[str, float]: Dictionary mit model -> normalized_latency_score
+            Dict[str | tuple[str, ...], float]:
+                Dictionary mit group key -> normalized_latency_score
         """
-        # Gruppiere nach Modell und sammle alle Einzelmessungen
+        # Gruppiere nach konfigurierten Keys und sammle alle Einzelmessungen
         model_latencies = defaultdict(list)
         all_latency_values = []
         
         for result in results:
-            model = result.get("model")
+            group_values = []
+            for key in group_by_keys:
+                value = result.get(key)
+                if value is None:
+                    group_values = []
+                    break
+                group_values.append(str(value))
+            if not group_values:
+                continue
+
+            group_key: str | tuple[str, ...]
+            if len(group_values) == 1:
+                group_key = group_values[0]
+            else:
+                group_key = tuple(group_values)
+
             latency = result.get("total_latency")
             
-            if model and latency is not None:
-                model_latencies[model].append(latency)
+            if latency is not None:
+                model_latencies[group_key].append(latency)
                 all_latency_values.append(latency)
         
         # Berechne Mittelwerte pro Modell

@@ -57,11 +57,13 @@ class OllamaConfig:
     url_test: str = os.getenv("OLLAMA_URL_TEST") or ""
 
     # Metrics Service Endpoints
+    metrics_local_endpoint: str = os.getenv("METRICS_LOCAL_ENDPOINT") or "http://localhost:8080/metrics"  # Lokale VM (Embedding)
     metrics_low_endpoint: str = os.getenv("OLLAMA_URL_LOW_METRICS_SERVICE_ENDPOINT") or ""
     metrics_mid_endpoint: str = os.getenv("OLLAMA_URL_MID_METRICS_SERVICE_ENDPOINT") or ""
     metrics_high_endpoint: str = os.getenv("OLLAMA_URL_HIGH_METRICS_SERVICE_ENDPOINT") or ""
     metrics_ultra_endpoint: str = os.getenv("OLLAMA_URL_ULTRA_METRICS_SERVICE_ENDPOINT") or ""
     metrics_interval: int = int(os.getenv("OLLAMA_METRICS_SERVICE_INTERVAL") or "1")
+    metrics_local_interval: float = float(os.getenv("OLLAMA_LOC_METRICS_SERVICE_INTERVAL") or "0.5")
 
     #Standardmodell
     #model: str = os.getenv("OLLAMA_MODEL") or ""

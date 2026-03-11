@@ -30,7 +30,8 @@ class SystemMetricsLogger:
         self,
         experiment_id: str,
         output_dir: str = "output/experiment",
-        profile: Literal["low", "mid", "high", "gpu"] = "low"
+        profile: Literal["low", "mid", "high", "gpu", "local"] = "low",
+        file_prefix: str = "system_metrics"
     ):
         """
         Initialisiert den System Metrics Logger.
@@ -39,22 +40,25 @@ class SystemMetricsLogger:
             experiment_id: Eindeutige ID des Experiments
             output_dir: Verzeichnis für die Metrics-CSV
             profile: Profil für die Metrics-Endpoint-Auswahl
+            file_prefix: Präfix für CSV-Dateiname (z.B. "system_metrics" oder "embedding_metrics")
         """
         self.logger = get_logger(f"{__name__}.SystemMetricsLogger")
         self.experiment_id = experiment_id
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.profile = profile
+        self.file_prefix = file_prefix
         
         # Lade Config
         self.config = OllamaConfig()
         
         # Wähle Endpoint basierend auf Profil
         self.metrics_endpoint = self._get_metrics_endpoint(profile)
-        self.interval = self.config.metrics_interval
+        # Verwende lokales Intervall für "local" Profile, sonst Standard-Intervall
+        self.interval = self.config.metrics_local_interval if profile == "local" else self.config.metrics_interval
         
         # CSV-Datei vorbereiten
-        self.csv_file = self.output_dir / f"system_metrics_{self.experiment_id}.csv"
+        self.csv_file = self.output_dir / f"{self.file_prefix}_{self.experiment_id}.csv"
         self._init_csv()
         
         # Thread-Kontrolle
@@ -63,7 +67,7 @@ class SystemMetricsLogger:
         
         self.logger.info(f"System Metrics Logger initialisiert - Endpoint: {self.metrics_endpoint}, Intervall: {self.interval}s")
     
-    def _get_metrics_endpoint(self, profile: Literal["low", "mid", "high", "gpu"]) -> str:
+    def _get_metrics_endpoint(self, profile: Literal["low", "mid", "high", "gpu", "local"]) -> str:
         """
         Gibt den Metrics-Endpoint für das angegebene Profil zurück.
         
@@ -73,7 +77,9 @@ class SystemMetricsLogger:
         Returns:
             str: Metrics-Endpoint URL
         """
-        if profile == "low":
+        if profile == "local":
+            return self.config.metrics_local_endpoint
+        elif profile == "low":
             return self.config.metrics_low_endpoint
         elif profile == "mid":
             return self.config.metrics_mid_endpoint
@@ -82,8 +88,8 @@ class SystemMetricsLogger:
         elif profile == "gpu":
             return self.config.metrics_ultra_endpoint
         
-        self.logger.warning(f"Unbekanntes Profil: {profile}, verwende low-endpoint")
-        return self.config.metrics_low_endpoint
+        self.logger.warning(f"Unbekanntes Profil: {profile}, verwende local-endpoint")
+        return self.config.metrics_local_endpoint
     
     def _init_csv(self):
         """Initialisiert die CSV-Datei mit Header."""
@@ -93,6 +99,7 @@ class SystemMetricsLogger:
                     "timestamp",
                     "trace_id",
                     "profile",
+                    "snapshot_type",
                     "cpu_usage",
                     "memory_usage",
                     "ram_used_mb",
@@ -109,12 +116,13 @@ class SystemMetricsLogger:
                 writer.writeheader()
             self.logger.info(f"Metrics CSV initialisiert: {self.csv_file}")
     
-    def _fetch_metrics(self, trace_id: str) -> dict:
+    def _fetch_metrics(self, trace_id: str, snapshot_type: str = "continuous") -> dict:
         """
         Ruft Metriken vom Metrics-Service ab.
         
         Args:
             trace_id: Trace-ID für Korrelation
+            snapshot_type: Art des Snapshots ("pre", "continuous", "post")
             
         Returns:
             dict: Metrics-Daten
@@ -124,6 +132,7 @@ class SystemMetricsLogger:
                 "timestamp": datetime.now().isoformat(),
                 "trace_id": trace_id,
                 "profile": self.profile,
+                "snapshot_type": snapshot_type,
                 "cpu_usage": None,
                 "memory_usage": None,
                 "ram_used_mb": None,
@@ -155,6 +164,7 @@ class SystemMetricsLogger:
                 "timestamp": datetime.now().isoformat(),
                 "trace_id": trace_id or data.get("trace_id", ""),
                 "profile": self.profile,
+                "snapshot_type": snapshot_type,
                 "cpu_usage": data.get("cpu_system_percent"),
                 "memory_usage": data.get("ram_system_percent"),
                 "ram_used_mb": data.get("ram_used_mb"),
@@ -175,6 +185,7 @@ class SystemMetricsLogger:
                 "timestamp": datetime.now().isoformat(),
                 "trace_id": trace_id,
                 "profile": self.profile,
+                "snapshot_type": snapshot_type,
                 "cpu_usage": None,
                 "memory_usage": None,
                 "ram_used_mb": None,
@@ -189,6 +200,34 @@ class SystemMetricsLogger:
                 "response_raw": f"ERROR: {str(e)}"
             }
     
+    def _write_metrics(self, metrics: dict):
+        """
+        Schreibt Metriken in die CSV-Datei.
+        
+        Args:
+            metrics: Dictionary mit Metrik-Daten
+        """
+        with open(self.csv_file, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "timestamp",
+                "trace_id",
+                "profile",
+                "snapshot_type",
+                "cpu_usage",
+                "memory_usage",
+                "ram_used_mb",
+                "ram_available_mb",
+                "ram_total_mb",
+                "ollama_proc_cpu_percent",
+                "ollama_proc_rss_mb",
+                "gpu_usage",
+                "gpu_memory",
+                "host",
+                "ts_epoch",
+                "response_raw"
+            ])
+            writer.writerow(metrics)
+    
     def _log_metrics_loop(self, trace_id: str):
         """
         Logging-Loop der periodisch Metriken sammelt.
@@ -197,31 +236,23 @@ class SystemMetricsLogger:
             trace_id: Trace-ID für diesen Testfall
         """
         while not self._stop_event.is_set():
-            metrics = self._fetch_metrics(trace_id)
-            
-            # Schreibe in CSV
-            with open(self.csv_file, "a", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=[
-                    "timestamp",
-                    "trace_id",
-                    "profile",
-                    "cpu_usage",
-                    "memory_usage",
-                    "ram_used_mb",
-                    "ram_available_mb",
-                    "ram_total_mb",
-                    "ollama_proc_cpu_percent",
-                    "ollama_proc_rss_mb",
-                    "gpu_usage",
-                    "gpu_memory",
-                    "host",
-                    "ts_epoch",
-                    "response_raw"
-                ])
-                writer.writerow(metrics)
+            metrics = self._fetch_metrics(trace_id, snapshot_type="continuous")
+            self._write_metrics(metrics)
             
             # Warte für das nächste Intervall oder bis Stop-Signal
             self._stop_event.wait(self.interval)
+    
+    def capture_snapshot(self, trace_id: str, snapshot_type: str = "pre"):
+        """
+        Erfasst einen einzelnen Snapshot der System-Metriken.
+        
+        Args:
+            trace_id: Trace-ID für Korrelation
+            snapshot_type: Art des Snapshots ("pre" = vor Testfall, "post" = nach Testfall)
+        """
+        metrics = self._fetch_metrics(trace_id, snapshot_type=snapshot_type)
+        self._write_metrics(metrics)
+        self.logger.debug(f"{snapshot_type.upper()}-Snapshot erfasst für trace_id: {trace_id}")
     
     def start_logging(self, trace_id: str):
         """

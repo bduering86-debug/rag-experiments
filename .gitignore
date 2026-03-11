@@ -28,13 +28,12 @@ logs/
 Thumbs.db
 
 # Output Directory - generierte Dateien
-output/**/*.csv
 output/**/*.json
 output/**/*.log
 output/**/ollama_calls.csv
+output/metrics/ 
 !output/README.md
 
-scripts/
 tests/
 docs/
 

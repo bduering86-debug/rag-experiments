@@ -164,4 +164,4 @@ class RetrievalScoreCalculator:
             return "Schwach - Wenige Dokumente gefunden, Ranking durchschnittlich"
         
         else:  # both low
-            return "Sehr schlecht - Kaum relevante Dokumente gefunden und schlecht gerankt"
+            return "Sehr schlecht - Kaum oder keine relevante Dokumente gefunden und schlecht gerankt"

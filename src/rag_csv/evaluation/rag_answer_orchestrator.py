@@ -11,10 +11,14 @@ Orchestriert den kompletten RAG-Answer-Flow:
 """
 
 import os
+import sys
 import csv
 import time
 import requests
 import uuid
+import subprocess
+import statistics
+from collections import defaultdict
 from typing import List, Dict, Any, Literal, Optional
 from pathlib import Path
 from datetime import datetime
@@ -50,14 +54,14 @@ BASELINE_MODELS = [
 MID_PROFILE_MODELS = [
     "llama3.1:8b-instruct-q6_K",
     "granite3.1-dense:8b-instruct-q6_K",
-    "qwen2.5:7b-instruct-q4_K_M",
+    "qwen2.5:1.5b-instruct-q6_k",
 ]
 
 # Zusätzliche Modelle für High-Profile
 HIGH_PROFILE_MODELS = [
     "llama3.1:8b-instruct-q8_0",
     "granite3.1-dense:8b-instruct-q8_0",
-    "qwen2.5:14b-instruct-q4_K_M",
+    "qwen2.5:1.5b-instruct-q8_0",
 ]
 
 
@@ -85,6 +89,111 @@ class RAGAnswerOrchestrator:
             if not filepath.exists():
                 return filepath
             run_number += 1
+
+    def _run_aggregation_for_runs_file(self, runs_file: Path) -> None:
+        """Führt die Case/Model-Aggregation gezielt für die aktuelle Runs-Datei aus."""
+        try:
+            import csv as csv_module
+
+            limit = sys.maxsize
+            while True:
+                try:
+                    csv_module.field_size_limit(limit)
+                    break
+                except OverflowError:
+                    limit //= 10
+
+            project_root = Path(__file__).resolve().parents[3]
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+
+            from aggregate_metrics import process_runs_file
+
+            process_runs_file(runs_file, self.output_dir)
+            logger.info("✓ Aggregation abgeschlossen für: %s", runs_file.name)
+        except Exception as exc:
+            logger.error("❌ Aggregation fehlgeschlagen für %s: %s", runs_file, exc)
+
+    def _run_experiment_metrics_evaluation(
+        self,
+        *,
+        export_root: Path | None = None,
+        exclude_gpu: bool = False,
+        recompute_scores_from_runs: bool = False,
+        flat_export: bool = False,
+        save_scores: bool = False,
+    ) -> None:
+        """Führt abschließend evaluate_experiment_metrics.py für die aktuelle Experiment-ID aus."""
+        project_root = Path(__file__).resolve().parents[3]
+        script_path = project_root / "src" / "scripts" / "evaluate_experiment_metrics.py"
+
+        if not script_path.exists():
+            logger.error("❌ evaluate_experiment_metrics.py nicht gefunden: %s", script_path)
+            return
+
+        try:
+            cmd = [
+                sys.executable,
+                str(script_path),
+                "--experiment-id",
+                self.experiment_id,
+                "--project-root",
+                str(project_root),
+            ]
+
+            if export_root is not None:
+                cmd.extend(["--export-root", str(export_root)])
+            if exclude_gpu:
+                cmd.append("--exclude-gpu")
+            if recompute_scores_from_runs:
+                cmd.append("--recompute-scores-from-runs")
+            if flat_export:
+                cmd.append("--flat-export")
+            if save_scores:
+                cmd.append("--save-scores")
+
+            subprocess.run(cmd, check=True)
+            logger.info(
+                "✓ evaluate_experiment_metrics.py abgeschlossen für %s (export_root=%s, exclude_gpu=%s)",
+                self.experiment_id,
+                str(export_root) if export_root is not None else "default",
+                exclude_gpu,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error("❌ evaluate_experiment_metrics.py fehlgeschlagen (Exit %s)", exc.returncode)
+
+    def _run_experiment_metrics_variants_if_gpu(self, profiles: List[str]) -> None:
+        """Erzeugt default/no-gpu Varianten unter output/<experiment>, falls GPU-Profil genutzt wurde."""
+        has_gpu_profile = any(str(profile).strip().lower() == "gpu" for profile in profiles)
+        if not has_gpu_profile:
+            logger.info("ℹ️ Kein GPU-Profil in diesem Lauf - Variante default/no-gpu wird nicht erzeugt")
+            return
+
+        variants_root = self.output_dir.parent / f"{self.experiment_id}"
+        default_dir = variants_root / "default"
+        no_gpu_dir = variants_root / "no-gpu"
+        default_dir.mkdir(parents=True, exist_ok=True)
+        no_gpu_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info("📦 GPU-Profil erkannt - erzeuge Varianten-Auswertung unter: %s", variants_root)
+
+        # Variante 1: default (inkl. GPU)
+        self._run_experiment_metrics_evaluation(
+            export_root=default_dir,
+            exclude_gpu=False,
+            recompute_scores_from_runs=True,
+            flat_export=True,
+            save_scores=True,
+        )
+
+        # Variante 2: no-gpu (ohne GPU-Profil, inkl. neu berechneter Scores)
+        self._run_experiment_metrics_evaluation(
+            export_root=no_gpu_dir,
+            exclude_gpu=True,
+            recompute_scores_from_runs=True,
+            flat_export=True,
+            save_scores=True,
+        )
     
     def __init__(
         self,
@@ -141,6 +250,72 @@ class RAGAnswerOrchestrator:
         logger.info("  - Top-K: %d", self.top_k)
         logger.info("  - Runs per Testcase: %d", self.runs_per_testcase)
         logger.info("  - Output Dir: %s", self.output_dir)
+    
+    def ensure_metrics_server_running(self) -> bool:
+        """
+        Prüft ob der lokale Metriken-Server läuft und startet ihn falls nötig.
+        
+        Returns:
+            bool: True wenn Server läuft (oder erfolgreich gestartet), False bei Fehler
+        """
+        metrics_url = "http://localhost:8081/health"
+        
+        try:
+            # Prüfe ob Server bereits läuft
+            response = requests.get(metrics_url, timeout=2)
+            if response.status_code == 200:
+                logger.info("✓ Lokaler Metriken-Server läuft bereits (Port 8081)")
+                return True
+        except (requests.ConnectionError, requests.Timeout):
+            # Server läuft nicht, versuche zu starten
+            logger.warning("⚠️  Lokaler Metriken-Server läuft nicht - starte Server...")
+            
+            try:
+                # Finde Python-Executable (venv oder system)
+                venv_python = Path("venv/bin/python")
+                if venv_python.exists():
+                    python_cmd = str(venv_python.absolute())
+                else:
+                    python_cmd = "python"
+                
+                # Starte Server im Hintergrund
+                script_path = Path("scripts/local_metrics_server.py")
+                log_path = Path("logs/local_metrics_server.log")
+                
+                if not script_path.exists():
+                    logger.error("❌ Metriken-Server-Skript nicht gefunden: %s", script_path)
+                    return False
+                
+                # Starte Server mit nohup
+                with open(log_path, "a") as log_file:
+                    subprocess.Popen(
+                        [python_cmd, str(script_path)],
+                        stdout=log_file,
+                        stderr=subprocess.STDOUT,
+                        start_new_session=True  # Detach vom Parent-Prozess
+                    )
+                
+                # Warte kurz und prüfe ob Server hochgefahren ist
+                time.sleep(3)
+                
+                try:
+                    response = requests.get(metrics_url, timeout=2)
+                    if response.status_code == 200:
+                        logger.info("✓ Lokaler Metriken-Server erfolgreich gestartet (Port 8081)")
+                        return True
+                    else:
+                        logger.error("❌ Metriken-Server antwortet nicht korrekt (Status: %d)", response.status_code)
+                        return False
+                except (requests.ConnectionError, requests.Timeout):
+                    logger.error("❌ Metriken-Server konnte nicht gestartet werden")
+                    logger.error("   Prüfe Log: %s", log_path)
+                    return False
+                    
+            except Exception as e:
+                logger.error("❌ Fehler beim Starten des Metriken-Servers: %s", e)
+                return False
+        
+        return False
     
     def get_models_for_profile(self, profile: Literal["low", "mid", "high"]) -> List[str]:
         """
@@ -231,25 +406,38 @@ class RAGAnswerOrchestrator:
         
         return hits
     
-    def build_prompt(self, testcase: Dict[str, Any], hits: List[SearchHit]) -> str:
+    def build_context(self, hits: List[SearchHit], top_n: int = 3) -> str:
         """
-        Erstellt Prompt aus Testfall und Retrieval-Ergebnissen.
+        Erstellt Context-String aus Top-N KB-Artikeln (nach Score sortiert).
+        
+        Args:
+            hits: Retrieval-Ergebnisse
+            top_n: Anzahl der Top-Hits für Context (default: 3)
+            
+        Returns:
+            str: Formatierter Context-String
+        """
+        # Sortiere Hits nach Score absteigend und nimm nur Top-N
+        sorted_hits = sorted(hits, key=lambda h: h.score, reverse=True)[:top_n]
+        
+        context_blocks = []
+        for hit in sorted_hits:
+            header = f"[{hit.collection.upper()} - Score: {hit.score:.4f}]\n"
+            context_blocks.append(header + hit.text)
+        
+        return "\n\n-----\n\n".join(context_blocks)
+    
+    def build_prompt(self, testcase: Dict[str, Any], context: str) -> str:
+        """
+        Erstellt Prompt aus Testfall und vorbereiteten Context.
         
         Args:
             testcase: Testfall-Dictionary
-            hits: Retrieval-Ergebnisse
+            context: Vorbereiteter Context-String aus Top-N KB-Artikeln
             
         Returns:
             str: Formatierter Prompt
         """
-        context_blocks = []
-        for hit in hits:
-            meta = hit.metadata
-            header = f"[{hit.collection.upper()} - Score: {hit.score:.4f}]\n"
-            context_blocks.append(header + hit.text)
-        
-        context = "\n\n-----\n\n".join(context_blocks)
-        
         prompt = f"""Du bist ein IT-Support-Spezialist. Analysiere das gemeldete Problem und erstelle eine sachliche, strukturierte Lösung.
 
 Kontext aus Wissensdatenbank und früheren Incidents:
@@ -304,7 +492,7 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
                     "model": model,
                     "prompt": prompt,
                     "options": {
-                        "num_thread": threads,
+                        #"num_thread": threads, # Wird nicht mehr mitgeschickt, da zu viele threads bei GPU-Inferenz zu Leistungsproblemen führen können
                         "num_ctx": self.ollama_config.num_ctx,
                         "temperature": temperature
                     },
@@ -396,10 +584,6 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             metrics["recall@k"] = 0.0
             metrics["gold_in_topk"] = False
         
-        # Platzhalter für LLM-as-a-Judge Metriken
-        metrics["llm_judge_score"] = None  # TODO: Implementieren
-        metrics["llm_judge_relevance"] = None  # TODO: Implementieren
-        
         return metrics
     
     def evaluate_testcase(
@@ -431,7 +615,20 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             output_dir=str(metrics_output_dir),
             profile=profile
         )
+        
+        # PRE-Snapshot: Baseline vor Testfall-Start (Leerlauf messen)
+        metrics_logger.capture_snapshot(trace_id, snapshot_type="pre")
+        
         metrics_logger.start_logging(trace_id)
+        
+        # Separater Logger für Embedding-Metriken (läuft lokal, nicht remote)
+        embedding_logger = SystemMetricsLogger(
+            experiment_id=self.experiment_id,
+            output_dir=str(metrics_output_dir),
+            profile="local",  # Embedding läuft auf lokaler VM, nicht auf Remote-Ollama-Maschine
+            file_prefix="embedding_metrics"
+        )
+        # Wird später beim Retrieval gestartet
         
         try:
             # Gesamtzeit messen (Wall-Clock)
@@ -444,15 +641,30 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             latency_tracker = LatencyTracker()
             latency_tracker.start_total()
             
-            # 1. Retrieval
+            # 1. Retrieval (mit Embedding-Metrics)
             latency_tracker.start_retrieval()
+            
+            # PRE-Snapshot für lokale Embedding-Metriken
+            embedding_logger.capture_snapshot(trace_id, snapshot_type="pre")
+            
+            embedding_logger.start_logging(trace_id)
             hits = self.retrieve_for_testcase(testcase)
+            embedding_logger.stop_logging()
+            
+            # POST-Snapshot für lokale Embedding-Metriken
+            embedding_logger.capture_snapshot(trace_id, snapshot_type="post")
+            
             latency_tracker.end_retrieval()
             
-            # 2. Prompt erstellen
-            prompt = self.build_prompt(testcase, hits)
+            # 2. Context erstellen (Top-3 KB-Artikel nach Score sortiert)
+            context = self.build_context(hits, top_n=3)
+            logger.debug("  Context erstellt aus Top-3 Hits (Scores: %s)", 
+                        [f"{h.score:.4f}" for h in sorted(hits, key=lambda h: h.score, reverse=True)[:3]])
             
-            # 3. Ollama anfragen
+            # 3. Prompt erstellen
+            prompt = self.build_prompt(testcase, context)
+            
+            # 4. Ollama anfragen
             url = self.get_ollama_url_for_profile(profile)
             threads = self.get_threads_for_profile(profile)
             
@@ -460,7 +672,7 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             ollama_result = self.ask_ollama(prompt, model, url, threads)
             latency_tracker.end_llm()
             
-            # 4. Metriken berechnen
+            # 5. Metriken berechnen
             gold_kb_id = testcase.get("gold_kb_id", "")
             metrics = self.compute_metrics(hits, gold_kb_id)
             
@@ -474,23 +686,18 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             latency_tracker.end_total()
             latency_metrics = latency_tracker.get_metrics()
             
-            # 5. Retrieval Score berechnen
+            # 6. Retrieval Score berechnen
             retrieval_score = self.retrieval_score_calculator.calculate(
                 recall=metrics.get("recall@k"),
                 ndcg=metrics.get("ndcg@k")
             )
             
-            # 6. LLM Judge Evaluation (optional)
+            # 7. LLM Judge Evaluation (optional) - nutzt denselben Context wie Prompt
             judge_metrics = {}
             judge_result = None  # Initialize judge_result
             if self.use_llm_judge and self.llm_judge and ollama_result["success"]:
                 try:
-                    # Kontext aus Hits extrahieren
-                    context = "\n\n".join([
-                        f"[{hit.collection.upper()}] {hit.text}"
-                        for hit in hits[:3]  # Nur erste 3 für Context
-                    ])
-                    
+                    # Nutze denselben vorbereiteten Context (bereits Top-3, sortiert)
                     judge_result = self.llm_judge.evaluate(
                         ticket_description=testcase.get("ticket_description", ""),
                         context=context,
@@ -539,7 +746,7 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             if judge_result and judge_result.get("success"):
                 judge_feedback = judge_result.get("feedback", "")
             
-            # 7. Ergebnis zusammenstellen
+            # 8. Ergebnis zusammenstellen
             result = {
                 "experiment_id": self.experiment_id,
                 "trace_id": trace_id,
@@ -576,11 +783,18 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
                        latency_metrics["retrieval_duration"] or 0,
                        latency_metrics["llm_duration"] or 0)
             logger.info("  ✓ Total Wall Time: %.2fs (inkl. Judge & Overhead)", total_wall_time)
-            logger.info("  ✓ Tokens: %d prompt + %d generated = %d total | %.1f tok/s",
+            logger.info("  ✓ Tokens: %d prompt + %d generated = %d total",
                        token_metrics["prompt_tokens"] or 0,
                        token_metrics["generated_tokens"] or 0,
-                       token_metrics["total_tokens"] or 0,
-                       token_metrics["tokens_per_second"] or 0)
+                       token_metrics["total_tokens"] or 0)
+            logger.info("  ✓ Throughput: %.1f tok/s (generation) | %.1f tok/s (prompt)",
+                       token_metrics["tokens_per_second"] or 0,
+                       token_metrics["prompt_tokens_per_second"] or 0)
+            logger.info("  ✓ Durations: Total=%.2fs, Load=%.2fs, PromptEval=%.2fs, Eval=%.2fs",
+                       token_metrics["total_duration_seconds"] or 0,
+                       token_metrics["load_duration_seconds"] or 0,
+                       token_metrics["prompt_eval_duration_seconds"] or 0,
+                       token_metrics["eval_duration_seconds"] or 0)
             
             # Verkürzte LLM-Antwort loggen
             response_preview = ollama_result["response"][:150] + "..." if len(ollama_result["response"]) > 150 else ollama_result["response"]
@@ -600,6 +814,15 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         finally:
             # Stoppe System Metrics Logging
             metrics_logger.stop_logging()
+            
+            # POST-Snapshot: Baseline nach Testfall-Ende (Leerlauf messen)
+            metrics_logger.capture_snapshot(trace_id, snapshot_type="post")
+            
+            # Stelle sicher, dass auch Embedding-Logger gestoppt wird
+            try:
+                embedding_logger.stop_logging()
+            except:
+                pass  # Falls bereits gestoppt
     
     def log_testcase_details(self, testcases: List[Dict[str, Any]]) -> str:
         """
@@ -700,6 +923,10 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         """
         logger.info("=== RAG Evaluation gestartet ===")
         
+        # Prüfe und starte Metriken-Server falls nötig
+        if not self.ensure_metrics_server_running():
+            logger.warning("⚠️  Evaluation läuft ohne lokalen Metriken-Server (Embedding-Metriken fehlen möglicherweise)")
+        
         if profiles is None:
             profiles = ["low", "mid", "high", "gpu"]
         
@@ -731,6 +958,7 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             "latency_ms",
             "total_wall_time_ms",
             "tokens_per_s",
+            "prompt_tokens_per_s",
             "llm_judge_f",
             "llm_judge_r",
             "llm_judge_c",
@@ -739,6 +967,11 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
             "llm_judge_interpretation",
             "prompt_tokens",
             "completion_tokens",
+            "total_tokens",
+            "total_duration_s",
+            "load_duration_s",
+            "prompt_eval_duration_s",
+            "eval_duration_s",
             "error_flag",
             "gold_kb_id",
             "gold_kb_fulltext",
@@ -801,6 +1034,7 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
                             "latency_ms": int(result.get("total_latency", 0) * 1000) if result.get("total_latency") else None,
                             "total_wall_time_ms": int(result.get("total_wall_time", 0) * 1000) if result.get("total_wall_time") else None,
                             "tokens_per_s": result.get("tokens_per_second"),
+                            "prompt_tokens_per_s": result.get("prompt_tokens_per_second"),
                             "llm_judge_f": result.get("judge_faithfulness"),
                             "llm_judge_r": result.get("judge_relevance"),
                             "llm_judge_c": result.get("judge_completeness"),
@@ -809,6 +1043,11 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
                             "llm_judge_interpretation": judge_interpretation,
                             "prompt_tokens": result.get("prompt_tokens"),
                             "completion_tokens": result.get("generated_tokens"),
+                            "total_tokens": result.get("total_tokens"),
+                            "total_duration_s": result.get("total_duration_seconds"),
+                            "load_duration_s": result.get("load_duration_seconds"),
+                            "prompt_eval_duration_s": result.get("prompt_eval_duration_seconds"),
+                            "eval_duration_s": result.get("eval_duration_seconds"),
                             "error_flag": 0 if result.get("ollama_success") else 1,
                             "gold_kb_id": result.get("gold_kb_id", ""),
                             "gold_kb_fulltext": result.get("gold_kb_fulltext", ""),
@@ -828,29 +1067,75 @@ Hinweis: Nutze ausschließlich die Informationen aus dem bereitgestellten Kontex
         
         # Berechne Token- und Latency-Scores
         logger.info("\n📊 Berechne Performance-Scores...")
-        
+
         token_calculator = TokenScoreCalculator()
-        token_scores = token_calculator.calculate_scores(results)
-        
+        token_scores = token_calculator.calculate_scores(results, group_by_keys=("profile", "model"))
+
         latency_calculator = LatencyScoreCalculator()
-        latency_scores = latency_calculator.calculate_scores(results)
-        
+        latency_scores = latency_calculator.calculate_scores(results, group_by_keys=("profile", "model"))
+
+        retrieval_values_by_combo = defaultdict(list)
+        answer_values_by_combo = defaultdict(list)
+        for result in results:
+            profile = result.get("profile")
+            model = result.get("model")
+            if not profile or not model:
+                continue
+
+            combo = (str(profile), str(model))
+
+            retrieval_value = result.get("retrieval_score")
+            if retrieval_value is not None:
+                retrieval_values_by_combo[combo].append(retrieval_value)
+
+            answer_value = result.get("judge_normalized_score")
+            if answer_value is not None:
+                answer_values_by_combo[combo].append(answer_value)
+
+        retrieval_scores = {
+            combo: statistics.mean(values)
+            for combo, values in retrieval_values_by_combo.items()
+            if values
+        }
+        answer_scores = {
+            combo: statistics.mean(values)
+            for combo, values in answer_values_by_combo.items()
+            if values
+        }
+
         # Speichere Scores in separater Datei
         scores_file = self.output_dir / f"scores_{self.experiment_id}.csv"
-        all_models = set(list(token_scores.keys()) + list(latency_scores.keys()))
-        
+        all_combinations = set(
+            list(token_scores.keys())
+            + list(latency_scores.keys())
+            + list(retrieval_scores.keys())
+            + list(answer_scores.keys())
+        )
+
         with open(scores_file, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=["model", "token_score", "latency_score"])
+            writer = csv.DictWriter(
+                f,
+                fieldnames=["profile", "model", "token_score_norm", "latency_score", "retrieval_score", "answer_score"],
+            )
             writer.writeheader()
-            
-            for model in sorted(all_models):
+
+            for profile, model in sorted(all_combinations):
                 writer.writerow({
+                    "profile": profile,
                     "model": model,
-                    "token_score": token_scores.get(model),
-                    "latency_score": latency_scores.get(model)
+                    "token_score_norm": token_scores.get((profile, model)),
+                    "latency_score": latency_scores.get((profile, model)),
+                    "retrieval_score": retrieval_scores.get((profile, model)),
+                    "answer_score": answer_scores.get((profile, model)),
                 })
         
         logger.info("Performance-Scores gespeichert: %s", scores_file)
+
+        # Post-Processing: Aggregation + finale Experiment-Metrik-Auswertung
+        logger.info("\n📦 Starte Post-Processing (Aggregation + evaluate_experiment_metrics)...")
+        self._run_aggregation_for_runs_file(output_file)
+        self._run_experiment_metrics_evaluation()
+        self._run_experiment_metrics_variants_if_gpu(profiles)
         
         return str(output_file)
     

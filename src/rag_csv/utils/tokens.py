@@ -21,6 +21,7 @@ class TokenTracker:
     - prompt_eval_count: Anzahl der Prompt-Tokens
     - eval_count: Anzahl der generierten Tokens
     - total_duration: Gesamtzeit in Nanosekunden
+    - load_duration: Zeit für Modell-Laden in Nanosekunden
     - prompt_eval_duration: Zeit für Prompt-Verarbeitung in Nanosekunden
     - eval_duration: Zeit für Token-Generierung in Nanosekunden
     """
@@ -29,6 +30,7 @@ class TokenTracker:
     generated_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
     total_duration_ns: Optional[int] = None
+    load_duration_ns: Optional[int] = None
     prompt_eval_duration_ns: Optional[int] = None
     eval_duration_ns: Optional[int] = None
     
@@ -56,6 +58,7 @@ class TokenTracker:
             generated_tokens=generated_tokens,
             total_tokens=total_tokens,
             total_duration_ns=response.get("total_duration"),
+            load_duration_ns=response.get("load_duration"),
             prompt_eval_duration_ns=response.get("prompt_eval_duration"),
             eval_duration_ns=response.get("eval_duration")
         )
@@ -79,11 +82,36 @@ class TokenTracker:
         return self.generated_tokens / duration_seconds
     
     @property
+    def prompt_tokens_per_second(self) -> Optional[float]:
+        """
+        Berechnet Tokens pro Sekunde für Prompt-Verarbeitung.
+        
+        Returns:
+            Prompt-Tokens/Sekunde oder None wenn nicht berechenbar
+        """
+        if self.prompt_tokens is None or self.prompt_eval_duration_ns is None:
+            return None
+        
+        if self.prompt_eval_duration_ns == 0:
+            return None
+        
+        # Nanosekunden zu Sekunden konvertieren
+        duration_seconds = self.prompt_eval_duration_ns / 1e9
+        return self.prompt_tokens / duration_seconds
+    
+    @property
     def total_duration_seconds(self) -> Optional[float]:
         """Gesamtdauer in Sekunden."""
         if self.total_duration_ns is None:
             return None
         return self.total_duration_ns / 1e9
+    
+    @property
+    def load_duration_seconds(self) -> Optional[float]:
+        """Modell-Lade-Dauer in Sekunden."""
+        if self.load_duration_ns is None:
+            return None
+        return self.load_duration_ns / 1e9
     
     @property
     def prompt_eval_duration_seconds(self) -> Optional[float]:
@@ -111,7 +139,9 @@ class TokenTracker:
             "generated_tokens": self.generated_tokens,
             "total_tokens": self.total_tokens,
             "tokens_per_second": self.tokens_per_second,
+            "prompt_tokens_per_second": self.prompt_tokens_per_second,
             "total_duration_seconds": self.total_duration_seconds,
+            "load_duration_seconds": self.load_duration_seconds,
             "prompt_eval_duration_seconds": self.prompt_eval_duration_seconds,
             "eval_duration_seconds": self.eval_duration_seconds
         }
