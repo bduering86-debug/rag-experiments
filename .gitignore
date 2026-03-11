@@ -13,6 +13,8 @@ venv/
 
 # Data files (sensitive or large)
 *.csv
+!data/
+!data/**/*.csv
 generator/output/
 output_archive/
 

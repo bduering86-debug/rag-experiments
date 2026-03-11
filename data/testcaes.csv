@@ -1,0 +1,289 @@
+prompt:test_casetest_case_id;ticket_title;ticket_description;category;service;issue_type;difficulty_level;gold_kb_id;gold_kb_fulltext;has_golden_solution;Stichprobe;KB-Validierung;custom_solution ;Column1;_1
+TC-P-01;Monitor-Reaktivierung nach Stromausfall im Kontrollraum;Nach einem lokalen Stromausfall bleibt der Hauptmonitor der Überwachungsstation schwarz, obwohl die Workstation bereits neu gestartet wurde. Ein Hard-Reset des Monitors über die Stromzufuhr scheint gemäß Dokumentation notwendig.;Hardware;Monitor;ConnectivityIssue;low;KB-8B842A26;"KB-ID: KB-8B842A26
+Titel: Monitor-Hardware-Fehler: Bildschirm schwarz bleibt nach Neustart
+Kategorie/Service: Hardware / Monitor
+Issue-Typ: HardwareFailure
+Problem: Der Monitorbildschirm bleibt schwarz, wenn das System neu gestartet wird. Dies kann auf ein Hardwarefehler oder eine Einstellungsoption zurückzuführen sein.
+Symptome: Bildschirm schwarz nach Neustart | Keine Bildschirmeigenschaften angezeigt werden | Monitorstabilität ist beeinträchtigt | Fehlermeldung auf dem Bildschirm | Sporadisches Verhalten des Bildschirms
+Ursache: Hardwarefehler am Monitor | Einstellungsoptionen falsch eingestellt | Bildschirmkabel defekt oder falsch angeschlossen | Monitordefekt oder Fehlfunktion
+Lösungsschritte: Überprüfen und reparieren des Bildschirmkabels | Einstellungsoptionen überprüfen und korrigieren | Bildschirm neu starten und System neu booten | Monitor neu anschließen oder ersetzen
+Validierung: Überprüfen, ob der Monitorbildschirm nach dem Start neu angezeigt wird und keine Fehlermeldung auftritt.";WAHR;x;x; ;;
+TC-P-02;Scanner-Initialisierungsfehler in der Poststelle;Der Netzwerk-Scanner in der Poststelle wird nach dem nächtlichen Wartungsfenster nicht mehr im Netz erkannt. Die Power-LED blinkt orange, was auf einen hängenden Initialisierungsdienst hindeutet.;Hardware;Scanner;ServiceUnavailable;low;KB-B7D4BB5B;"KB-ID: KB-B7D4BB5B
+Titel: Scanner-Ausfall bei Windows-Server
+Kategorie/Service: Hardware / Scanner
+Issue-Typ: ServiceUnavailable
+Problem: Der Scanner auf Windows-Servern erleidet periodisch Ausfälle und kann nicht erreichbar gemacht werden.
+Symptome: Fehlermeldungen beim Starten des Scanners | Kein Druckerzugriff möglich | Schwierigkeiten bei der Verbindung zum Scanner
+Ursache: Fehlerhafte Hardware oder Software-Komponente | Veraltetes Betriebssystem oder fehlende Sicherheitspatches | Konflikte mit anderen Anwendungen oder Diensten | Hardware-Fehler oder -Feuchtigkeit
+Lösungsschritte: Scanner neu starten und Konnektivität prüfen | Hardware-Test durchführen, um Fehler zu identifizieren | Sicherheitspatches auf dem Betriebssystem anwenden | Konflikte mit anderen Anwendungen oder Diensten lösen
+Validierung: Das Problem wird überprüft, indem der Scanner nach einem Neu-Start erreichbar gemacht und die Konnektivität überprüft wird.";WAHR;x;x; ;;
+TC-P-03;Azure AD Gruppenberechtigung für DevOps-Repository fehlt;"Ein neuer Entwickler kann keine Code-Änderungen in das ""Core-Banking"" Repository pushen. Die Zuweisung zur Azure AD Gruppe 'DevOps-Write' scheint nicht korrekt an die Ressourcen-Ebene propagiert worden zu sein.";Access;Azure AD;PermissionDenied;mid;KB-7339913E;"KB-ID: KB-7339913E
+Titel: Unzureichende Berechtigungen bei Azure AD-Anmeldung
+Kategorie/Service: Access / Azure AD
+Issue-Typ: PermissionDenied
+Problem: Einige Benutzer berichten, dass sie aufgrund mangelnder Berechtigungen nicht angemeldet werden können. Dies kann durch verschiedene Faktoren wie mangelnde Administratorrechte oder fehlende Zugriffsrechte verursacht werden.
+Symptome: Fehlermeldung bei der Anmeldung | Nicht genügend Rechte, um bestimmte Aktionen auszuführen | Unfähigkeit, auf bestimmte Ressourcen zuzugreifen | 403-Fehlermeldung bei der Anmeldung
+Ursache: Mangelnde Administratorrechte | Fehlende Zugriffsrechte | Misconfiguration des Azure AD-Systems | Unzureichende Berechtigungen für den Benutzer
+Lösungsschritte: Überprüfen der Berechtigungen des Benutzers und Aktualisieren der Zugriffsrechte im Azure AD. | Erteilen der Benutzergruppe die erforderlichen Zugriffsrechte. | Überprüfen der Misconfiguration des Azure AD-Systems und korrigieren. | Aktualisieren der Berechtigungen für den Benutzer.
+Validierung: Das Problem wird überprüft, indem man die Berechtigungen des Benutzers überprüft und sicherstellt, dass die erforderlichen Zugriffsrechte vorhanden sind.";WAHR;x;x; ;;
+TC-P-04;SharePoint-Dokumentenbibliothek: Schreibzugriff verweigert für Marketing;Mitglieder des Marketing-Teams können Dokumente in der Bibliothek 'Kampagnen_2026' nur lesen, obwohl sie der Gruppe 'Content-Editoren' mit Vollzugriff angehören.;Web;SharePoint;PermissionDenied;mid;KB-9914B298;"KB-ID: KB-9914B298
+Titel: SharePoint PermissionError: Berechtigungsfehler bei Zugriff auf SharePoint-Ressourcen
+Kategorie/Service: Web / SharePoint
+Issue-Typ: PermissionDenied
+Fehlercodes: 403 Forbidden
+Problem: Ein Benutzer erhält bei einem Zugriff auf SharePoint-Ressourcen eine Berechtigungsfehler (403 Forbidden) und kann diese nicht bearbeiten oder lesen.
+Symptome: Fehlermeldung: 'Gelöscht werden Sie, weil Sie keine Berechtigung haben', | Benutzer versucht Zugriff auf geschützte Ressourcen zu erhalten, aber wird abgelehnt. | Benutzer kann bestimmte Aktionen nicht durchführen, obwohl er die notwendigen Berechtigungen hat.
+Ursache: Falsche oder fehlende Berechtigungen für den Benutzer. | Veraltetes oder fehlerhaftes SharePoint-Setup. | Konflikte zwischen Berechtigungen und SharePoint-Sicherheitskonfiguration.
+Lösungsschritte: Überprüfen der aktiven Berechtigungen des Benutzers in SharePoint. | Überprüfen der SharePoint-Sicherheitskonfiguration und korrigieren fehlerhafte Einstellungen. | Aktualisieren oder installieren von SharePoint-Updates, um Veraltetigkeit zu entfernen.
+Validierung: Das Problem ist gelöst, wenn der Benutzer die Berechtigungen überprüft und gegebenenfalls ändert oder wenn das SharePoint-Setup korrigiert wird.";WAHR;x;x; ;;
+TC-P-05;Deployment-Stagnation im Kubernetes-Produktionscluster;Der automatisierte Rollout der neuen 'PayGate'-Microservices stagniert im Status 'Pending'. Die Events deuten auf ein Ressourcen-Limit-Problem beim Deployment-Scheduler hin.;DevOps;Kubernetes;Timeout;mid;KB-FDC092AC;"KB-ID: KB-FDC092AC
+Titel: Timeouts bei Kubernetes-Verbindungen
+Kategorie/Service: DevOps / Kubernetes
+Issue-Typ: Timeout
+Problem: Ein Timeout bei der Verbindung zu einem Kubernetes-Cluster kann auf verschiedene Weise auftreten, darunter lange API-Aufrufe, fehlende Antworten oder unerwartete Fehlermeldungen. Dies kann die Leistung und Verfügbarkeit von Anwendungen erheblich beeinträchtigen.
+Symptome: Lange API-Aufrufe | Fehlende Antworten | Unerwartete Fehlermeldungen
+Ursache: Konflikte zwischen Kubernetes-Konfiguration und Netzwerkumgebungen | Fehlerhafte Implementierung von APIs oder Client-Code | Überlastung des Kubernetes-Klusters durch große Anforderungen | Netzwerkschwierigkeiten oder -fehler
+Lösungsschritte: Überprüfen der Kubernetes-Konfiguration und Netzwerkumgebung, um Konflikte zu finden. | Fehlerhafte Implementierung von APIs oder Client-Code überprüfen und korrigieren. | Kubernetes-Kluster optimieren, um Überlastung zu vermeiden. | Netzwerkschwierigkeiten oder -fehler identifizieren und beheben.
+Validierung: Das Problem wird durch Überprüfung der Lösungsschritte bestätigt, indem die API-Aufrufe erfolgreich abgeschlossen werden und keine Fehlermeldungen mehr auftreten.";WAHR;x;x; ;;
+TC-P-06;Passwort-Self-Service: Fehler bei der Verifizierung;Ein Mitarbeiter versucht sein abgelaufenes Passwort über das interne Portal zurückzusetzen, erhält aber nach Eingabe des Verifizierungscodes eine Fehlermeldung 'Service-Timeout'.;Access;Password Reset;AuthenticationError;low;KB-39B6B6A0;"KB-ID: KB-39B6B6A0
+Titel: Fehler beim Passwortreset: Verbindungsschwierigkeiten und Timeout
+Kategorie/Service: Access / Password Reset
+Problem: Bei der Anmeldung mit dem neuen Passwort treten Verbindungsschwierigkeiten und ein Timeout auf. Der Reset-Prompt-Zeitenplan ist zu kurz.
+Symptome: Fehler beim Passwortwechsel | Verbindungsfehler bei der Anmeldung mit dem neuen Passwort | Timeout beim Passwort-Reset-Prozess | System meldet einen Fehler
+Ursache: Probleme mit den Netzwerkprovisioningseinstellungen | Fehlerhafte Systemkonfigurationen | Durchfehltige Anmeldung mit dem neuen Passwort
+Lösungsschritte: Überprüfen und Aktualisieren der Proxy-Einstellungen. | Erhöhung des Reset-Prompt-Zeitraums in den Systemeinstellungen. | Überprüfen der Netzwerkprovisioningseinstellungen und korrigieren bei Bedarf. | Prüfen der Systemkonfigurationen und korrigieren bei Bedarf. | Durchführen einer Manuelle Anmeldung mit dem neuen Passwort und Überprüfen der Anmeldedaten.
+Validierung: Überprüfen, ob die Lösung erfolgreich durchgeführt wurde, indem man das neue Passwort einsetzt und die Verbindung herstellt.";WAHR;x;x; ;;
+TC-P-07;VPN-Einwahl über Proxy-Server aus dem Home-Office schlägt fehl;Beim Aufbau der VPN-Verbindung über den regionalen Proxy-Endpunkt bricht der Client mit der Meldung 'ERR_PROXY_CONNECTION_FAILED' ab, obwohl die Anmeldedaten korrekt sind.;Network;VPN;ConnectionFailure;mid;KB-6C29E05C;"KB-ID: KB-6C29E05C
+Titel: VPN-Proxy-Verbindung fehlert
+Kategorie/Service: Network / VPN
+Issue-Typ: ConnectionFailure
+Fehlercodes: ERR_PROXY_CONNECTION_FAILED
+Problem: Die VPN-Proxy-Verbindung kann nicht hergestellt werden und führt zu einem fehlenden Zugang zum Internet.
+Symptome: Fehlermeldung: 'Proxy Connection Failed' | Zeitübergang beim Anmelden auf das Netzwerk | Verbindungsausfall bei der VPN-Anwendung
+Ursache: Probleme mit dem VPN-Server oder -Client | Konflikte zwischen den Proxy-Einstellungen und dem Betriebssystem | Fehlende Konfiguration des VPN-Proxies
+Lösungsschritte: Überprüfen der VPN-Verbindung und die Netzwerkkonfiguration | Neu konfigurieren der VPN-Proxys | Überprüfen der Betriebssystemeinstellungen und deren Übereinstimmung mit den VPN-Einstellungen
+Validierung: Die Verbindung wird überprüft, indem man die VPN-Anwendung erneut öffnet und sich verbindet.";WAHR;x;x; ;;
+TC-P-08;Anzeigefehler im Chrome-Browser bei internen Dashboards;Interne Dashboards der Personalabteilung werden fragmentiert und mit veralteten CSS-Styles dargestellt. Ein Löschen der temporären Browser-Dateien wird als Standardbehebung empfohlen.;Software;Browser;ClientBug;low;KB-78AE164E;"KB-ID: KB-78AE164E
+Titel: Browser-Sitzungsunterbrechung und Serviceunverfügbarkeit bei CRM-System und Website
+Kategorie/Service: Software / Browser
+Issue-Typ: ServiceUnavailable
+Problem: Ein technisches Problem mit dem Browser, das zu häufigen Sitzungsabbrüchen und Serviceunverfügbarkeiten führt, insbesondere bei CRM-System und Unternehmenswebsite.
+Symptome: Fehler beim Laden der Website oder CRM-System | Sitzungsabbrüche beim Browsen | Serviceunverfügbarkeit beim CRM-System oder bei bestimmten Webseiten
+Ursache: Fehlende Aktualisierung des Browsers | Kompatibilitätsprobleme mit der CRM-Software | Server-Sicherheitslücken oder -fehler
+Lösungsschritte: Aktualisieren Sie Ihren Browser auf den neuesten Stand. | Überprüfen und aktualisieren Sie die CRM-Software, um sicherzustellen, dass sie kompatibel mit Ihrem Browser ist. | Überprüfen Sie die Server-Sicherheitslücken oder -fehler und beheben Sie diese | Lösen Sie eventuelle Server-Probleme durch Wartung oder Neuanstart des Servers.
+Validierung: Überprüfen Sie, ob das Problem wirklich gelöst ist, indem Sie die Lösungsschritte ausführen und prüfen, ob die Serviceunverfügbarkeit oder Sitzungsabbrüche verschwinden.";WAHR;x;x; ;;
+TC-P-09;SIEM: Massive Log-Verzögerung bei nächtlichen Backup-Jobs;Während der nächtlichen Backup-Fenster steigen die Timeouts bei der Log-Ingestion im SIEM massiv an. Die Puffergrößen für API-Abfragen müssen gemäß SOC-Richtlinie angepasst werden.;Security;SIEM;Timeout;high;KB-05A77485;"KB-ID: KB-05A77485
+Titel: Timeout im SIEM-Dienst
+Kategorie/Service: Security / SIEM
+Issue-Typ: Timeout
+Problem: Im SIEM-Dienst treten häufig Timeouts auf, was die Dienstverfügbarkeit beeinträchtigt.
+Symptome: Timeout-Fehler beim SIEM-Dienstaufruf | Verbindung zu dem Remote-Server Timeout | Datenbankzugriff wird aufgrund eines Timeouts abgelehnt | SIEM-Laden dauert zu lange, was das Einloggen verhindert
+Ursache: Überlastung des SIEM-Dienstes durch häufige Anfragen | Fehlerhafte Netzwerkkonfiguration | Datenbankverbindungsparameter fehlerhaft eingestellt | SIEM-Software veraltet oder nicht korrekt installiert
+Lösungsschritte: Überprüfen der SIEM-Dienstkonfiguration und Anpassen der Parameter | Verifizieren der Netzwerkkonfiguration und des Remote-Servers | Datenbankverbindungsparameter überprüfen und anpassen | SIEM-Software aktualisieren oder korrekt installieren | Durchführen eines SIEM-Patch-Updates, falls erforderlich
+Validierung: Das Problem wird überprüft, indem die SIEM-Dienstkonfiguration und die Netzwerkkonfiguration überprüft werden. Die Datenbankverbindungsparameter werden auch überprüft und gegebenenfalls angepasst.";WAHR;x;x; ;;
+TC-P-10;Authentifizierungsfehler bei Docker-Push in die lokale Registry;Entwickler erhalten beim Versuch, Container-Images in die On-Premise Registry zu laden, einen 401-Fehler. Das Auth-Token im Docker-Client scheint abgelaufen oder ungültig zu sein.;DevOps;Docker Registry;PermissionDenied;mid;KB-3A22BE9F;"KB-ID: KB-3A22BE9F
+Titel: Docker Registry PermissionDenied-Problemlösung
+Kategorie/Service: DevOps / Docker Registry
+Issue-Typ: PermissionDenied
+Fehlercodes: PermissionDenied
+Problem: Docker Registry Zugriffsprobleme aufgrund fehlender Berechtigungen.
+Symptome: Fehlermeldung 'PermissionDenied' beim Zugriff auf das Repository. | Benutzer hat keine Berechtigungen, um den Docker Registry zu nutzen. | Benutzerfehler, kein Zugriff auf den Docker-Registrär aufgrund von Berechtigungsproblemen.
+Ursache: Fehlende oder ungültige Benutzerberechtigungen für den Docker Registry. | Konflikte zwischen Benutzern und Registrierungskonfigurationen. | Ungültige Berechtigungsbereiche im Docker-Registry.
+Lösungsschritte: Überprüfen der Benutzerberechtigungen und aktualisieren Sie die Berechtigungen für den Benutzer. | Überprüfen der Registrierungskonfigurationen und aktualisieren Sie die Berechtigungsbereiche im Docker-Registry. | Konflikte zwischen Benutzern und Registrierungskonfigurationen lösen, indem Sie die Berechtigungen neu konfigurieren.
+Validierung: Überprüfen der Benutzerberechtigungen nach Lösung.";WAHR;x;x; ;;
+TC-P-11;Tastatur-Eingabeverzögerung am Fertigungs-Terminal;Am Steuerungsterminal 4 der Produktion werden Tastaturanschläge erst mit mehreren Sekunden Verzögerung verarbeitet. Ein Wechsel des USB-Ports am Terminal-PC wird angefragt.;Hardware;Keyboard;HardwareFailure;low;KB-7A02D2BB;"KB-ID: KB-7A02D2BB
+Titel: Fehler beim Start des Keyboards auf Windows Server 2016 und anderen Betriebssystemen
+Kategorie/Service: Hardware / Keyboard
+Issue-Typ: HardwareFailure
+Problem: Das Keyboard funktioniert nicht oder reagiert nicht auf Eingaben beim Start des Systems oder unter bestimmten Bedingungen.
+Symptome: Keine Tasten drücken können | Fehlermeldungen bei der Anmeldung am Computer | Tastaturanschläge nicht registriert werden | Keine Eingabe über die Tastatur möglich
+Ursache: Defekte oder defekterne Hardware | USB-Verbindungsschwierigkeiten | Betriebssystemfehler oder -konflikte
+Lösungsschritte: Überprüfen Sie die USB-Verbindung und den USB-Anschluss. | Ersetzen Sie das defekte oder defekterne Keyboard durch ein anderes. | Überprüfen Sie das Betriebssystem auf Fehler oder Konflikte und beheben Sie sie. | Überprüfen Sie die Hardware-Kompatibilität zwischen dem Keyboard und dem System.
+Validierung: Das Problem wird überprüft, indem das defekte oder defekterne Keyboard durch ein anderes ersetzt wird und die USB-Verbindung und das Betriebssystem auf Fehler oder Konflikte überprüft werden.";WAHR;x;x; ;;
+TC-P-12;SQL Server: Windows-Authentifizierung verweigert Zugriff;Nach der Migration auf einen neuen Domain Controller akzeptiert der MSSQL-Cluster keine Verbindungen mehr, die über die integrierte Windows-Authentifizierung initiiert werden.;Database;MSSQL;AuthenticationError;low;KB-0FC5268B;"KB-ID: KB-0FC5268B
+Titel: MSSQL AuthenticationError mit Fehlercode 0x80070005
+Kategorie/Service: Database / MSSQL
+Issue-Typ: AuthenticationError
+Fehlercodes: 0x80070005
+Problem: MSSQL-Anmeldung fehlschlägt bei der Authentifizierung mit Fehlercode 0x80070005.
+Symptome: Fehlermeldung beim Anmelden in MSSQL | Unberechtigter Zugriff auf MSSQL-Datenbank | Kann nicht über SSL anmelden | Keine Datenbankverbindung möglich
+Ursache: Berechtigungsschwierigkeiten für den Benutzer | Fehlerhafte Konfiguration der Authentifizierungseinstellungen | Veraltetes oder fehlerhaftes SSL-Zertifikat | Korrupte Datenbank-Dateien
+Lösungsschritte: Überprüfen Sie die Berechtigungen des Benutzers und aktualisieren Sie bei Bedarf. | Überprüfen Sie die Authentifizierungseinstellungen und korrigieren Sie Fehler. | Überprüfen Sie das SSL-Zertifikat und aktualisieren Sie bei Bedarf. | Reinigen Sie die Datenbank-Dateien und überprüfen Sie die Konnektivität.
+Validierung: Überprüfen Sie, ob der Benutzer nach den korrekten Berechtigungen und Authentifizierungseinstellungen angemeldet werden kann.";WAHR;x;x; ;;
+TC-P-13;SSO-Claim-Mapping-Fehler in der neuen Finanz-App;Beim Starten der Finanz-Applikation via SSO werden die Kostenstellen-Attribute des Benutzers nicht korrekt übergeben, was zu einer Fehlermeldung innerhalb der Anwendung führt.;Access;SSO;PermissionDenied;mid;KB-7CF874D5;"KB-ID: KB-7CF874D5
+Titel: SSO-Berechtigungsfehler mit PermissionDenied
+Kategorie/Service: Access / SSO
+Issue-Typ: PermissionDenied
+Fehlercodes: PermissionDenied
+Problem: Ein Benutzer erhält beim SSO-Anmeldeversuch eine PermissionDenied-Fehlermeldung und kann nicht auf Ressourcen zugreifen.
+Symptome: Fehlermeldung: 'PermissionDenied' | Benutzer kann nicht auf Ressourcen zugreifen | SSO-Anmeldeprozess ist blockiert | Berechtigungsfehler beim Benutzerauftritt
+Ursache: Unzureichende Berechtigungen für SSO | Fehlerhafte Konfiguration des SSO-Systems | Benutzerberechtigungen nicht korrekt gesetzt | Sicherheitsrichtlinien verletzt
+Lösungsschritte: Überprüfen und korrigieren der Benutzerberechtigung für SSO | Fehlerhafte Konfiguration des SSO-Systems überprüfen und korrigieren | Benutzerberechtigungen neu setzen | Sicherheitsrichtlinien überprüfen und anpassen
+Validierung: Überprüfen, ob die Berechtigung für SSO korrekt gesetzt ist und der Benutzerauftritt erfolgreich abgeschlossen wird.";WAHR;x;x; ;;
+TC-P-14;Linux-NAS-Clients zeigen keine Verzeichnisinhalte;Während Windows-Clients alle Freigaben auf dem zentralen NAS sehen, wird das Verzeichnis 'Shared-Docs' auf allen Linux-basierten Forschungs-Workstations als leer angezeigt.;Storage;NAS;ClientBug;high;KB-18D584BC;"KB-ID: KB-18D584BC
+Titel: NAS Client Bug: Inkonsistente Daten auf dem NAS
+Kategorie/Service: Storage / NAS
+Issue-Typ: ClientBug
+Problem: Der Client für das NAS-System verursacht inkonsistente Daten auf dem NAS.
+Symptome: Fehlerhafte Daten auf dem NAS | Inkonsistente Daten im Dateisystem | Unerwartete Abstürze beim Zugriff auf NAS
+Ursache: Fehlende oder fehlende Aktualisierung des Client-Tools | Fehlerhafte Konfiguration des NAS-Systems | Inkompatible Software-Kompatibilität
+Lösungsschritte: Aktualisieren Sie das Client-Tool auf den neuesten Stand. | Überprüfen und korrigieren Sie die Konfiguration des NAS-Systems. | Überprüfen Sie, ob die Software-Kompatibilität mit dem NAS-System einvernehmlich ist.
+Validierung: Überprüfen Sie, ob die Daten auf dem NAS konsistent sind und keine Fehlermeldungen mehr auftreten.";WAHR;x;x; ;;
+TC-P-15;VPN-Client bricht Verbindung nach Reaktivierung aus Standby ab;Wenn ein Laptop aus dem Standby-Modus erwacht, stellt der VPN-Client die gesicherte Verbindung nicht automatisch wieder her und erfordert einen kompletten Neustart der Anwendung.;Software;VPN Client;ConnectivityIssue;low;KB-520B3F86;"KB-ID: KB-520B3F86
+Titel: Verbindungsfehler beim VPN Client
+Kategorie/Service: Software / VPN Client
+Issue-Typ: ConnectivityIssue
+Problem: Der VPN-Client kann nicht mit dem Server verbinden. Dies kann durch verschiedene Faktoren wie eine fehlerhafte VPN-Terminologie oder eine ungenügende Netzwerkkonfiguration verursacht werden.
+Symptome: Fehlermeldung beim Starten des VPN Clients | Instabilität der Verbindung | Häufige Unterbrechung der Verbindung
+Ursache: Fehlerhafte VPN-Terminologie | Ungenügend Netzwerkkonfiguration | Veraltet oder fehlerhaftes Betriebssystem
+Lösungsschritte: Überprüfen Sie die aktuelle VPN-Terminologie und aktualisieren Sie sie, wenn nötig. | Überprüfen Sie die Netzwerkkonfiguration und stellen Sie sicher, dass alle Einstellungen korrekt sind. | Überprüfen Sie das Betriebssystem und aktualisieren Sie es auf den neuesten Stand, wenn nötig.
+Validierung: Überprüfen Sie, ob die Verbindung stabil ist und keine Fehlermeldungen mehr auftreten.";WAHR;x;x; ;;
+TC-P-16;Load-Balancer: Einseitige Lastverteilung auf Web-Node A;Nach Wartungsarbeiten leitet der Load Balancer 95% des Traffics an Node A weiter, während Node B im Leerlauf bleibt, was zu Performance-Einbußen bei Node A führt.;Network;Load Balancer;Misconfiguration;mid;KB-D62AE239;"KB-ID: KB-D62AE239
+Titel: Falsche Konfiguration des Load Balancers
+Kategorie/Service: Network / Load Balancer
+Issue-Typ: Misconfiguration
+Problem: Der Load Balancer hat eine falsche Konfiguration, was zu Ausfällen und fehlenden Verbindungen führt.
+Symptome: Fehlermeldungen bei der Herstellung einer Verbindung | Unzureichende Verteilung der Last | Keine Verbindung herstellen kann | Client kann keine Verbindung aufbauen | Ausfälle beim Load Balancer
+Ursache: Falsche Konfiguration des TCP-Portes in der Konfigurationsdatei | Incorrecte Konfiguration des Proxy-Servers | Falsche Konfiguration des Load Balancers bei hostname | Unrichtige Konfiguration des Load Balancers
+Lösungsschritte: Korrektur des TCP-Portes in der Konfigurationsdatei. | Korrektur der Proxy-Konfiguration. | Konfigurationsdateien zurücksetzen und Load Balancer neu starten. | Konfiguration des Load Balancers korrigieren. | Überprüfen, ob die Konfiguration korrekt ist.
+Validierung: Überprüfung der Konfiguration mit einem Test-Client.";WAHR;x;x; ;;
+TC-P-17;AWS S3 Bucket: 'Access Denied' trotz IAM-FullAccess-Policy;Ein Administrator kann keine Objekte in einen S3-Bucket hochladen, obwohl seine IAM-Policy explizite FullAccess-Rechte gewährt. Ein Konflikt mit der Bucket-Policy wird vermutet.;Cloud;AWS S3;PermissionDenied;mid;KB-3C90D604;"KB-ID: KB-3C90D604
+Titel: Zugriffsbeschränkung auf S3-Bucket: 'PermissionDenied'-Fehler beim Zugriff
+Kategorie/Service: Cloud / AWS S3
+Issue-Typ: PermissionDenied
+Problem: Ein 'PermissionDenied'-Fehler tritt beim Zugriff auf einen S3-Bucket auf. Dies kann verschiedene Ursachen haben, wie z.B. fehlende Berechtigungen oder ein falsches IAM-Policy.
+Symptome: Fehlermeldung: 'Access Denied' oder ähnliche Fehlermeldungen | Keine Möglichkeit, Dateien in S3-Liste hinzuzufügen | Benutzer kann nicht auf S3-Bucket zugreifen | API-Zugriff verweigert
+Ursache: Fehlende Berechtigungen für den Benutzer | Falsches IAM-Policy | S3-Bucket ist gelocked | Berechtigungen des Benutzers sind nicht korrekt konfiguriert
+Lösungsschritte: Überprüfen und aktualisieren der Berechtigungen für den Benutzer | Ändern des IAM-Policies, um die erforderlichen Zugriffsrechte zu gewähren | Überprüfen und Aktualisieren der S3-Bucket-Einstellungen, um das Locking zu entfernen | Überprüfen und korrigieren der Berechtigungen des Benutzers
+Validierung: Das Problem wird überprüft, indem man die neuen Berechtigungen für den Benutzer überprüft und sicherstellt, dass das IAM-Policy korrekt konfiguriert ist.";WAHR;x;x; ;;
+TC-P-18;Java-Runtime-Absturz bei paralleler Datenverarbeitung;Die firmeninterne Analyse-Software stürzt konsistent mit einem OutOfMemory-Fehler ab, sobald die Heap-Size-Grenze während der parallelen Thread-Verarbeitung erreicht wird.;Software;Java Runtime;OutOfMemory;mid;KB-33ADD6FC;"KB-ID: KB-33ADD6FC
+Titel: Java Runtime Out of Memory Error
+Kategorie/Service: Software / Java Runtime
+Issue-Typ: OutOfMemory
+Problem: Ein Java Runtime-Out-of-Memory-Erinnerung wird bei bestimmten Anwendungen und in bestimmten Umgebungen auftritt.
+Symptome: Fehlermeldung: 'OutOfMemoryError' oder ähnliche Fehlermeldungen | Anwendung stürzt ab oder verlangsamt sich unerwartet | Speicherressourcen werden nicht korrekt freigesetzt | Java-Prozess wird nicht ordnungsgemäß beendet
+Ursache: Fehlende oder fehlende Speicherallokation für Java-Anwendungen | Unzureichende Java-Konfiguration oder -Parameter | Verwendung von veralteter Java-Version ohne Sicherheitsupdates | Schlechte Optimierung der Anwendungscode
+Lösungsschritte: Überprüfen und aktualisieren der Java-Konfiguration und -Parameter | Fehlende Speicherallokation für Java-Anwendungen ausgleichen | Verwendung von modernen Java-Versionen mit Sicherheitsupdates installieren | Anwendungscode optimieren und überprüfen
+Validierung: Überprüfen, ob die Fehlermeldung nach Lösung der oben genannten Schritte verschwindet.";WAHR;x;x; ;;
+TC-P-19;Scanner-Dienst nach Firmware-Update nicht erreichbar;Nach dem automatischen Firmware-Update heute Nacht lässt sich der Scanner-Dienst auf dem Druckserver nicht mehr starten. Der Fehlercode in den Logs verweist auf eine Inkompatibilität.;Hardware;Scanner;ServiceUnavailable;low;KB-B7D4BB5B;"KB-ID: KB-B7D4BB5B
+Titel: Scanner-Ausfall bei Windows-Server
+Kategorie/Service: Hardware / Scanner
+Issue-Typ: ServiceUnavailable
+Problem: Der Scanner auf Windows-Servern erleidet periodisch Ausfälle und kann nicht erreichbar gemacht werden.
+Symptome: Fehlermeldungen beim Starten des Scanners | Kein Druckerzugriff möglich | Schwierigkeiten bei der Verbindung zum Scanner
+Ursache: Fehlerhafte Hardware oder Software-Komponente | Veraltetes Betriebssystem oder fehlende Sicherheitspatches | Konflikte mit anderen Anwendungen oder Diensten | Hardware-Fehler oder -Feuchtigkeit
+Lösungsschritte: Scanner neu starten und Konnektivität prüfen | Hardware-Test durchführen, um Fehler zu identifizieren | Sicherheitspatches auf dem Betriebssystem anwenden | Konflikte mit anderen Anwendungen oder Diensten lösen
+Validierung: Das Problem wird überprüft, indem der Scanner nach einem Neu-Start erreichbar gemacht und die Konnektivität überprüft wird.";WAHR;x;x; ;;
+TC-P-20;Jenkins: Pipeline-Abbruch durch ungültigen Skriptpfad;Die CI-Pipeline für das Projekt 'Mobile-App' bricht beim Build-Schritt ab, da ein erforderliches Deployment-Skript unter dem im Jenkinsfile definierten Pfad nicht gefunden wird.;DevOps;Jenkins;ClientBug;mid;KB-842D5894;"KB-ID: KB-842D5894
+Titel: Jenkins-Misconfiguration: Fehler bei Protokoll-Erstellung, Pipeline-Konfiguration und Job-Skript
+Kategorie/Service: DevOps / Jenkins
+Issue-Typ: Misconfiguration
+Problem: Ein Fehler bei der Protokoll-Erstellung in Jenkins führt zu Problemen mit der Pipeline-Konfiguration und dem Job-Skript.
+Symptome: Fehler beim Erstellen von Protokollen | Pipeline fehlschlägt nach dem letzten Commit | Job-Skript ist fehlerhaft | System ist aufgrund von Überlastung instabil geworden
+Ursache: Falsche Konfiguration in Jenkins | Mangelnde Überprüfung der Pipeline-Konfiguration | Unzureichende Systemressourcen | Unbekannte IP-Adressen haben versucht, sich bei der Anwendung anzumelden
+Lösungsschritte: Überprüfen Sie die Jenkins-Protokoll-Einstellungen und Konfigurationen. | Überprüfen Sie die Pipeline-Konfiguration und korrigieren Sie eventuelle Fehler. | Erhöhen Sie die Systemressourcen, um Überlastungsprobleme zu vermeiden. | Überprüfen Sie den Job-Skript-Code und korrigieren Sie eventuelle Fehler.
+Validierung: Überprüfen Sie, ob alle Protokolle korrekt erfasst werden und die Pipeline fehlschlägt nicht mehr nach dem letzten Commit.";WAHR;x;x; ;;
+TC-P-21;SSL-Warnung in Niederlassung X durch fehlende Intermediate-Zertifikate;Mitarbeiter am Standort X erhalten bei jedem Zugriff auf das Intranet eine SSL-Warnmeldung, da das neue Intermediate-Zertifikat der Zertifizierungsstelle lokal fehlt.;Access;SSO;ConnectivityIssue;mid;KB-D4C996F8;"KB-ID: KB-D4C996F8
+Titel: SSO-Authentifizierungsprobleme bei SSL-Version
+Kategorie/Service: Access / SSO
+Issue-Typ: AuthenticationError
+Fehlercodes: ERR_SSL_VERSION
+Problem: Die Authentifizierung über SSO fehlschlägt aufgrund einer unverständlichen SSL-Version.
+Symptome: Fehlermeldung bei der Authentifizierung | Zugriffssperre beim SSO-Anmelden
+Ursache: Unverständliche SSL-Version im SSO-Dienst | Fehlende SSL-Terminierungseinstellungen
+Lösungsschritte: Aktualisiere die Authentifizierungsschlüssel im SSO-Dienst. | Überprüfe und konfiguriere die SSL-Terminierungseinstellungen.
+Validierung: Überprüfe, ob die Authentifizierung erfolgreich ist und keine Fehlermeldungen mehr erscheinen.";WAHR;x;x; ;;
+TC-P-22;Kubernetes: Cluster-weiter OutOfMemory-Status bei Batch-Jobs;Während der Ausführung der monatlichen Abrechnungs-Batch-Jobs laufen mehrere Pods im Cluster zeitgleich in einen OOM-Status (OutOfMemory) und werden beendet.;DevOps;Kubernetes;OutOfMemory;high;KB-5956E19C;"KB-ID: KB-5956E19C
+Titel: Kubernetes-Cluster startet nicht wegen OutOfMemory
+Kategorie/Service: DevOps / Kubernetes
+Issue-Typ: OutOfMemory
+Problem: Ein Kubernetes-Cluster kann aufgrund eines Memory Overflows nicht gestartet werden.
+Symptome: Der Cluster stürzt ab während des Starts | Fehlermeldungen wie 'Out of memory' erscheinen
+Ursache: Überlastung der Ressourcen im Cluster | Inadequate Speicherlimit | Unoptimierte Ressourcenzuweisung
+Lösungsschritte: Erhöhen Sie das Speicherlimit des Clusters | Optimieren Sie die Ressourcenzuweisung für den Cluster | Überprüfen und korrigieren Sie die Konfiguration des Clusters
+Validierung: Überprüfen Sie, ob der Cluster erfolgreich gestartet werden kann und keine Fehlermeldungen mehr erscheinen.";WAHR;x;x; ;;
+TC-P-23;Browser-Darstellungsfehler nach Update der Web-App;Nach dem Rollout von Version 2.4 der CRM-Web-App zeigt der Edge-Browser nur noch eine weiße Seite an. Ein Leeren des Caches behebt das Problem temporär gemäß KB.;Software;Browser;ClientBug;low;KB-78AE164E;"KB-ID: KB-78AE164E
+Titel: Browser-Sitzungsunterbrechung und Serviceunverfügbarkeit bei CRM-System und Website
+Kategorie/Service: Software / Browser
+Issue-Typ: ServiceUnavailable
+Problem: Ein technisches Problem mit dem Browser, das zu häufigen Sitzungsabbrüchen und Serviceunverfügbarkeiten führt, insbesondere bei CRM-System und Unternehmenswebsite.
+Symptome: Fehler beim Laden der Website oder CRM-System | Sitzungsabbrüche beim Browsen | Serviceunverfügbarkeit beim CRM-System oder bei bestimmten Webseiten
+Ursache: Fehlende Aktualisierung des Browsers | Kompatibilitätsprobleme mit der CRM-Software | Server-Sicherheitslücken oder -fehler
+Lösungsschritte: Aktualisieren Sie Ihren Browser auf den neuesten Stand. | Überprüfen und aktualisieren Sie die CRM-Software, um sicherzustellen, dass sie kompatibel mit Ihrem Browser ist. | Überprüfen Sie die Server-Sicherheitslücken oder -fehler und beheben Sie diese | Lösen Sie eventuelle Server-Probleme durch Wartung oder Neuanstart des Servers.
+Validierung: Überprüfen Sie, ob das Problem wirklich gelöst ist, indem Sie die Lösungsschritte ausführen und prüfen, ob die Serviceunverfügbarkeit oder Sitzungsabbrüche verschwinden.";WAHR;x;x; ;;
+TC-P-24;Conditional Access blockiert Vertriebsaußendienst in Spanien;Ein Mitarbeiter im Außeneinsatz in Spanien kann nicht auf das CRM zugreifen, da die Conditional Access Policy den Zugriff aus spanischen IP-Bereichen standardmäßig blockiert.;Access;Conditional Access;AuthenticationError;mid;KB-078087D9;"KB-ID: KB-078087D9
+Titel: Authentifizierungsfehler bei Zugriff auf Conditional Access
+Kategorie/Service: Access / Conditional Access
+Issue-Typ: AuthenticationError
+Fehlercodes: 401
+Problem: Ein Fehler bei der Authentifizierung führt zu einem Zugriff auf die Bedingte Zugriffsanforderung (Conditional Access).
+Symptome: Fehlermeldung: Zugriff verloren - Authentifizierung scheitert | Benutzer erhält eine 401-Antwort, obwohl seine Berechtigungen korrekt eingestellt sind
+Ursache: Mangelnde Einstellung der Azure AD-Authentifizierungseinstellungen | Fehlerhafte Konfiguration der Bedingten Zugriffsanforderung (Conditional Access)
+Lösungsschritte: Überprüfen Sie die Azure AD-Authentifizierungseinstellungen und stellen Sie sicher, dass der Benutzer korrekt konfiguriert ist. | Prüfen Sie die Bedingte Zugriffsanforderung (Conditional Access) auf Richtigkeit und Einstellungen.
+Validierung: Überprüfen Sie, ob der Benutzer nach den Einstellungen korrekt authentifiziert wurde. Wenn das Problem weiterhin besteht, überprüfen Sie die Azure AD-Authentifizierungseinstellungen und die Bedingte Zugriffsanforderung (Conditional Access) auf Richtigkeit und Einstellungen.";WAHR;x;x; ;;
+TC-P-25;Citrix: Fehlende Verbindung zum Lizenz-Server-Pool;Benutzer erhalten beim Starten ihrer virtuellen Desktops die Meldung, dass kein gültiger Lizenz-Server erreicht werden kann. Der Lizenz-Dienst am Hauptstandort scheint unresponsive.;Software;Citrix Workspace;ServiceUnavailable;mid;KB-A619FA44;"KB-ID: KB-A619FA44
+Titel: Citrix Workspace ServiceUnavailable: Wiederverwendbare Lösung für häufige Probleme
+Kategorie/Service: Software / Citrix Workspace
+Issue-Typ: ServiceUnavailable
+Fehlercodes: 503
+Problem: Der Citrix Workspace-Dienst ist nicht verfügbar und zeigt eine Fehlermeldung mit dem Code 503 an.
+Symptome: Fehlermeldung '503 ServiceUnavailable' erscheint beim Start des Citrix Workspaces | Zugriff auf Anwendungen unmöglich | Verbindung mit Citrix Workspace fehlschlägt | Citrix-Portal ist nicht erreichbar
+Ursache: Dienstausfall oder Serverfehler | Konfigurationsprobleme oder falsche Konfiguration | Netzwerkprobleme oder Verbindungsausfall | Softwarefehler oder Bugs im Citrix-Client
+Lösungsschritte: Überprüfen Sie den Status des Citrix-Dienstes und starten Sie ihn neu, wenn erforderlich. | Überprüfung der Konfiguration und Korrektur von Fehlerquellen. | Überprüfen Sie die Netzwerkverbindung und stellen Sie sicher, dass sie stabil ist. | Starten Sie den Citrix-Client neu und überprüfen Sie die Systemprotokolle.
+Validierung: Überprüfen Sie, ob der Citrix-Dienst wieder verfügbar ist und ob die Fehlermeldung verschwunden ist.";WAHR;x;x; ;;
+TC-P-26;Backup-Wiederherstellung: Dateisystem-Inkompatibilität bei Snapshot;Die Wiederherstellung eines Payroll-Backup-Snapshots schlägt fehl, da das Zielvolume ein Dateiformat nutzt, das mit dem ursprünglichen Snapshot-Format nicht kompatibel ist.;Backup;Snapshot Restore;Misconfiguration;high;KB-98C07CA3;"KB-ID: KB-98C07CA3
+Titel: Misconfiguration bei Snapshot-Prozesskonfigurationen
+Kategorie/Service: Backup / Snapshot Restore
+Issue-Typ: Misconfiguration
+Problem: Ein technisches Problem bei der Konfiguration des Snapshot-Restore-Service auftritt, was zu fehlschlagenden Wiederherstellungen führt.
+Symptome: Fehlermeldung beim Starten des Backup-Prozesses | Wiederherstellung fehlschlägt | Snapshot-Reparatur fehlschlägt
+Ursache: Konfigurationsfehler im Snapshot-Prozess | Berechtigungsprobleme beim Snapshot-Recovery-Prozess | Inkonsistente Backup-Snapshots | Unzureichender Speicherplatz für Backup-Snapshots
+Lösungsschritte: Überprüfen und korrigieren der Konfiguration des Snapshot-Restore-Service | Überprüfe und korrigiere die Berechtigungen des Benutzers | Korrigieren der Snapshot-Konfiguration und erneute Durchführung des Backup-Prozesses | Erweiterung des Speicherplatzes und erneute Durchführung der Backup-Snapshot
+Validierung: Überprüfen, ob die Konfiguration korrekt ist und die Berechtigungen des Benutzers gültig sind.";WAHR;x;x; ;;
+TC-P-27;Monitor zeigt 'Kein Signal' trotz aktiver Grafikkarte;Der Monitor eines CAD-Arbeitsplatzes zeigt kein Bild, obwohl der PC läuft. ;Hardware;Monitor;ConnectivityIssue;low;KB-8B842A26;"KB-ID: KB-8B842A26
+Titel: Monitor-Hardware-Fehler: Bildschirm schwarz bleibt nach Neustart
+Kategorie/Service: Hardware / Monitor
+Issue-Typ: HardwareFailure
+Problem: Der Monitorbildschirm bleibt schwarz, wenn das System neu gestartet wird. Dies kann auf ein Hardwarefehler oder eine Einstellungsoption zurückzuführen sein.
+Symptome: Bildschirm schwarz nach Neustart | Keine Bildschirmeigenschaften angezeigt werden | Monitorstabilität ist beeinträchtigt | Fehlermeldung auf dem Bildschirm | Sporadisches Verhalten des Bildschirms
+Ursache: Hardwarefehler am Monitor | Einstellungsoptionen falsch eingestellt | Bildschirmkabel defekt oder falsch angeschlossen | Monitordefekt oder Fehlfunktion
+Lösungsschritte: Überprüfen und reparieren des Bildschirmkabels | Einstellungsoptionen überprüfen und korrigieren | Bildschirm neu starten und System neu booten | Monitor neu anschließen oder ersetzen
+Validierung: Überprüfen, ob der Monitorbildschirm nach dem Start neu angezeigt wird und keine Fehlermeldung auftritt.";WAHR;x;x; ;;
+TC-P-28;Azure AD FaceID-Bug auf mobilen Dienstgeräten;Der Azure AD Client auf iPads fordert trotz aktivierter und korrekter FaceID-Einrichtung bei jedem App-Start zur manuellen Eingabe des Passworts auf.;Access;Azure AD;ClientBug;mid;KB-B14BEF33;"KB-ID: KB-B14BEF33
+Titel: Azure AD-Klientsuche nach Misconfiguration fehlschlägt
+Kategorie/Service: Access / Azure AD
+Issue-Typ: ClientBug
+Problem: Der Client zeigt einen Misconfiguration-Bug an, wenn er versucht, sich über das Portal zu authentifizieren.
+Symptome: Fehler beim Auslösen des Azure AD Dienst-Sitzungs-Token | Benutzer von Azure AD nicht aktualisiert nach Passwortwechseln | Erkennungsprozess von Benutzerkonten in Azure AD scheitert | Azure AD-Bug bei Windows-Anmeldung | Client zeigt einen Fehler beim Auslösen des Azure AD Dienst-Sitzungs-Token
+Ursache: Korrektur der Client-Benutzerdefinierten Einstellungen | Implementierung eines Workarounds für den Passwortwechsel-Bug | Stelle die Dienst-Sitzungs-URL sicher | Erkennungsprotokolle und -parameter neu konfigurieren
+Lösungsschritte: Installiere den neuesten Patch des Azure AD-Clients. | Implementiere einen Workaround für den Passwortwechsel-Bug, z.B. durch die Verwendung eines Sicherheits tokens. | Stelle sicher, dass die Dienst-Sitzungs-URL korrekt eingestellt ist. | Erkennungsprotokolle und -parameter neu konfigurieren.
+Validierung: Überprüfe, ob das Problem wirklich gelöst ist, indem du den Client neu startest und dich mit dem Azure AD-Konto anmeldest.";WAHR;x;x; ;;
+TC-P-29;PowerShell-Skript: Authentifizierungsfehler bei Remote-Abfrage;Ein Administrations-Skript schlägt bei der Authentifizierung an entfernten Servern fehl, obwohl die verwendeten Anmeldedaten im Passwort-Manager korrekt hinterlegt sind.;Software;PowerShell;AuthenticationError;low;KB-D0026867;"KB-ID: KB-D0026867
+Titel: PowerShell-Authentifizierungsfehler
+Kategorie/Service: Software / PowerShell
+Issue-Typ: AuthenticationError
+Problem: Einige Benutzer melden sich nicht an, weil ihre Passwörter falsch sind, oder sie können sich nicht authentifizieren, wenn sie das Skript ausführen. Der Benutzer kann sich nicht bei dem Dienst anmelden, oder der Script kann nicht angemeldet werden.
+Symptome: Fehlermeldungen beim Anmeldeprozess | Authentifizierungsfehler beim Ausführen von PowerShell-Befehlen | Benutzer kann sich nicht über PowerShell authentifizieren | Script kann nicht angemeldet werden, Authentifizierung fehlschlägt
+Ursache: Falsche Passwörter | Authentifizierungsfehler im Credential-Speicher | Erforderliche Authentifizierungsrichtlinie nicht aktualisiert | Überprüfung der Authentifizierungsdetails fehlgeschlagen
+Lösungsschritte: Überprüfen der Passwörter und Aktualisieren sie, wenn nötig. | Überprüfen der Authentifizierungsregeln und Anpassung des Credential-Speichers. | Aktualisieren der erforderlichen Authentifizierungsrichtlinie. | Überprüfen der Authentifizierungsdetails und erneuten Anmeldung, wenn nötig.
+Validierung: Mit diesen Schritten kann überprüft werden, dass das Problem wirklich gelöst ist. Die Passwörter sind korrekt, die Authentifizierungsregeln sind aktualisiert und der Credential-Speicher ist ordnungsgemäß konfiguriert.";WAHR;x;x; ;;
+TC-P-30;Elasticsearch: Cluster-Ausfall nach Index-Korruption;Die Suchfunktion im Dokumenten-Portal ist komplett ausgefallen, da ein korrupter Index den gesamten Elasticsearch-Dienst blockiert und Neustarts verhindert.;Database;ElasticSearch;ServiceUnavailable;high;KB-7025ED73;"KB-ID: KB-7025ED73
+Titel: ElasticSearch-Dienstausfall: Serviceunverfügbarkeit mit Fehlercode 503
+Kategorie/Service: Database / ElasticSearch
+Issue-Typ: ServiceUnavailable
+Fehlercodes: 503
+Problem: Der Elasticsearch-Dienst ist nicht verfügbar und liefert einen Fehlercode 503. Dies führt zu einem Ausfall der Indizierung und kann den Zugriff auf Daten verhindern.
+Symptome: Fehlermeldung: 'Service unavailable' | Datenzugriff verhindert | Indizierung nicht möglich
+Ursache: Überlastung durch großen Importvorgang | Fehler beim Neustarten von ElasticSearch | Konfigurationsfehler im Elasticsearch-Dienst | Betriebssystem-Fehler oder -konflikte
+Lösungsschritte: Überprüfen Sie den Status des Dienstes und starten Sie ihn neu, falls erforderlich. | Überprüfen Sie die Systemlogs für weitere Details über den Fehler. | Prüfen Sie die Konfiguration des Elasticsearch-Dienstes auf Fehler oder Unregelmäßigkeiten. | Ändern Sie das Betriebssystem oder überprüfen Sie eventuelle Konflikte mit anderen Diensten.
+Validierung: Überprüfen Sie den Status des Dienstes nach dem Neustarten und bestätigen Sie, dass der Fehler gelöst ist.";WAHR;x;x; ;;
+TC-N-31;Laptop-Totalschaden durch Gabelstapler-Unfall;Ein Laptop wurde im Logistikzentrum von einem Gabelstapler überrollt. Das Gehäuse ist deformiert, das Display gesplittert. Dringende Anfrage nach Ersatzgerät und Datenrettung der SSD.;Hardware;Notebook;HardwareFailure;low;;;FALSCH;;;Manuelle Prüfung der SSD durch Hardware-Spezialisten; Bestellung eines Ersatzgeräts über das Standard-Procurement-System. ;
+TC-N-32;Verdacht auf Social Engineering: Phishing-Anruf gemeldet;Ein Mitarbeiter meldet einen verdächtigen Anruf. Jemand gab sich als 'Global IT Security' aus und forderte einen MFA-Code an, um angeblich ein 'Sicherheitsprofil' zu synchronisieren.;Security;Identity;SecurityIssue;low;;;FALSCH;;;Sofortige Meldung an das Security Operations Center (SOC); Dokumentation der Anrufernummer und Sensibilisierung des Teams. ;
+TC-N-33;Font-Rendering-Fehler unter macOS Sequoia in Web-App;Die offizielle Unternehmensschriftart wird in einer internen Web-Anwendung unter dem neuen macOS Sequoia nur als Sonderzeichen dargestellt, während sie unter Windows korrekt erscheint.;Software;Web App;SoftwareIssue;low;;;FALSCH;;;Temporärer Wechsel auf eine Standard-Schriftart im Web-CSS; Untersuchung der Font-Kompatibilität mit dem neuen OS-Release. ;
+TC-N-34;IoT-Inkompatibilität: Smarte Kaffeemaschine im Office-WLAN;Der Versuch, eine neue smarte Kaffeemaschine für Wartungszwecke mit dem 'IoT-Restricted' VLAN zu verbinden, schlägt fehl, da das Gerät hardwareseitig kein WPA3-Enterprise unterstützt.;Network;IoT;ConnectivityIssue;low;;;FALSCH;;;Einsatz eines dedizierten IoT-Gateways mit Legacy-Verschlüsselungssupport oder Verzicht auf die WLAN-Anbindung. ;;
+TC-N-35;Synchronisationsfehler bei Meta Quest VR-Headsets;Die VR-Headsets für das Team-Training lassen sich nicht mit dem internen 'Spatial Data' Server synchronisieren;Hardware;VR-Headset;ConnectivityIssue;mid;;;FALSCH;;;false;Untersuchung der Firewall-Logs für die VR-Schnittstelle; ggf. Freigabe der proprietären Ports nach Security-Audit. 
+TC-N-36;Remote-Wipe Anfrage nach Gerätediebstahl aus PKW;Ein Mitarbeiter meldet den Diebstahl seines Dienstgeräts aus einem verschlossenen Fahrzeug. Er bittet um einen sofortigen Remote-Wipe, der jedoch im MDM für dieses Modell nicht konfiguriert ist.;Security;MDM;ComplianceRequest;mid;;;FALSCH;;;Manuelle Sperrung aller Benutzerzugänge (AD, VPN, Cloud); Einleitung der Diebstahlmeldung bei der Polizei und Versicherung. ;
+TC-N-37;Datenextraktion von obsoleten 3,5-Zoll-Disketten;Ein Abteilungsleiter hat alte Disketten mit 'Master Keys' aus den 90ern gefunden. Es existiert keine Hardware mehr im Unternehmen, um diese Medien auszulesen.;Hardware;Legacy Media;DataRecovery;low;;;FALSCH;;;Beauftragung eines externen Forensik-Dienstleisters zur Datenextraktion von Legacy-Medien. ;;
+TC-N-38;Dringender 'Legal Hold' für Benutzer-Account;Die Rechtsabteilung fordert die sofortige Sperrung aller Zugriffe und die unveränderte Sicherung aller Daten für einen spezifischen Mitarbeiter aufgrund einer gerichtlichen Anordnung.;Access;User Management;LegalHold;low;;;FALSCH;;;Manuelle Sperre des AD-Accounts; Export der Mailbox-Daten und Cloud-Drive-Inhalte in einen gesicherten Offline-Container. ;
+TC-N-39;Herzschrittmacher-Interferenz mit biometrischen Scannern;Ein Mitarbeiter berichtet, dass der neue Fingerabdruck-Scanner im Hochsicherheitsbereich Fehlfunktionen an seinem medizinischen Implantat (Herzschrittmacher) auslöst.;Hardware;Security Hardware;SafetyIssue;high;;;FALSCH;;;Sofortige Deaktivierung des Scanners für diesen Bereich; Prüfung alternativer Zugangsmethoden (RFID/Badge) für betroffene Personen. ;
+TC-N-40;Atmosphärische Störungen bei Starlink-VPN-Verbindung;Ein Forscher auf einem Schiff meldet VPN-Latenzen von über 10.000ms. Ursache sind ionosphärische Störungen, die die Satellitenverbindung (Starlink) massiv beeinträchtigen.;Network;VPN;ConnectivityIssue;mid;;;FALSCH;;;Nutzung von lokaler Datenpufferung; Umschalten auf alternative Kurzwellen-Datenübertragung für kritische Telemetrie.;
