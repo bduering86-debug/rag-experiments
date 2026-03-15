@@ -1,60 +1,75 @@
-Project Documentation
+# Project Documentation
 
-Overview
+## Overview
 
-This repository contains a small RAG ingestion pipeline: chunking of text, embedding using a local embedding server, and vector storage in Qdrant. The main components are:
+This repository contains a RAG pipeline with local embeddings, Qdrant vector storage, ingestion utilities, retrieval/evaluation helpers, and experiment tooling.
 
-- `bin/config.py`: central configuration classes (QdrantConfig, EmbeddingConfig, DataConfig).
-- `app/chunking.py`: text chunking functions.
-- `app/embeddings.py`: Embeddings client (batched) talking to HTTP embedding service.
-- `app/vectorstore.py`: Qdrant helper functions and a compatibility adapter for qdrant-client.
-- `app/setup_collections.py`: create / recreate Qdrant collections.
-- `app/ingest_kb.py`, `app/ingest_incidents.py`: ingestion scripts that use `DataConfig` instead of env vars.
-- `app/retriever.py`: simple Retriever wrapper exposing `retrieve` and `retrieve_with_scores`.
-- `app/test_embeddings.py`: small test harness for embeddings + vectorstore retrieval.
+Core package: `src/rag_csv/`
 
-Quick start (developer)
+- `config/`: settings, logging, text helpers
+- `core/`: embeddings, retrieval, reranking, vectorstore
+- `data/`: CSV loaders and chunking
+- `ingest/`: collection setup and data ingestion
+- `generator/`: synthetic KB/ticket generation and benchmarks
+- `evaluation/`: orchestration logic for answer evaluation
+- `utils/`: metrics, scoring, LLM judge/API helpers
 
-1. Create and activate virtualenv (already present in this repo as `venv`):
+## Quick Start (Developer)
 
 ```bash
-cd /path/to/rag_csv
+cd /home/bduering/rag_csv
 source venv/bin/activate
+pip install -e .
 ```
 
-2. Ensure Qdrant and embedding server are running (docker-compose used for Qdrant; embedding server expected at `http://localhost:8080`.)
+Ensure required services are running (e.g. Qdrant / local model backend) according to your local setup.
 
-3. Create collections (optional):
+### Setup collections
 
 ```bash
-python -m app.setup_collections --recreate
+python -m rag_csv.ingest.setup --recreate
 ```
 
-4. Ingest data:
+### Ingest data
 
 ```bash
-python -m app.ingest_kb
-python -m app.ingest_incidents
+python -m rag_csv.ingest.kb
+python -m rag_csv.ingest.incidents
 ```
 
-5. Run tests:
+### Run tests
 
 ```bash
-python -m app.test_embeddings
+pytest tests/test_embeddings.py
+pytest tests/test_retrieval.py
 ```
 
-Notes about compatibility adapter
+## CLI Commands
 
-`app/vectorstore.py` contains a small runtime adapter that attaches a `search` method onto `qdrant_client.QdrantClient` instances when the installed `qdrant-client` version exposes `query_points` (or returns different response shapes). This keeps the bundled `langchain_qdrant` wrapper working without forcing an immediate dependency upgrade.
+After `pip install -e .`, these console scripts are available:
 
-If you prefer pinning dependencies instead of using the adapter, pin `qdrant-client` and `langchain-qdrant` to mutually compatible versions in your environment.
+```bash
+rag-query "Outlook startet nicht" -c incidents -k 5
+rag-ingest all
+rag-benchmark
+rag-generate tickets
+```
 
-Files to inspect for details
+Definitions are in `pyproject.toml` under `[project.scripts]` and implemented in `src/rag_csv/cli.py`.
 
-- `app/vectorstore.py`
-- `app/retriever.py`
-- `app/embeddings.py`
-- `app/chunking.py`
-- `README.md`
+## Data and Git Behavior
+
+- `*.csv` is globally ignored in `.gitignore`.
+- CSV files in `data/` are explicitly re-included via `!data/**/*.csv`.
+- Generated artifacts under `output/` remain largely ignored except `output/README.md`.
+
+## Main Entry Points
+
+- `src/rag_csv/cli.py`
+- `src/rag_csv/ingest/setup.py`
+- `src/rag_csv/ingest/kb.py`
+- `src/rag_csv/ingest/incidents.py`
+- `src/rag_csv/core/retrieval.py`
+- `src/rag_csv/core/vectorstore.py`
 
 

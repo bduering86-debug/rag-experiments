@@ -45,8 +45,11 @@ rag_csv/
 │   ├── test_error_analysis.py  # Error Analysis Tests
 │   └── test_rq.py              # Metrik Tests (von metrics/test_rq.py)
 ├── scripts/                    # Standalone Scripts
-│   ├── query_demo.py           # Abfrage-Demo (von app/query_demo.py)
-│   └── eval_models.py          # Model Evaluation Script (von app/eval_models.py)
+│   ├── benchmark_embedding_models.sh
+│   ├── local_metrics_server.py
+│   ├── plot_experiment.py
+│   ├── runs_overview.py
+│   └── start_local_metrics_server.sh
 ├── output/                     # **NEU** Generierte Dateien
 │   ├── benchmarks/             # Benchmark-Ergebnisse (CSV)
 │   ├── generator/              # Generierte Tickets & KB (CSV)
@@ -58,13 +61,7 @@ rag_csv/
 ├── pyproject.toml              # Python Package Konfiguration (modern)
 ├── setup.py                    # Klassischer Python Package Installer
 ├── run_tests.py                # Test-Runner Utility
-└── test_new_structure.py       # Struktur-Validierung
-```
-├── data/                       # Datenverzeichnis
-├── docs/                       # Dokumentation
-├── logs/                       # Logging Output
-├── qdrant_data/                # Qdrant Vector Store
-└── output_archive/             # Archivierte Outputs
+└── tests/test_new_structure.py # Struktur-Validierung
 ```
 
 ## Migrations-Summary
@@ -92,15 +89,16 @@ rag_csv/
 | `benchmark/visual_benchmark.py` | `src/rag_csv/benchmark/visualize.py` | rag_csv.benchmark |
 | `metrics/*.py` | `src/rag_csv/utils/` | rag_csv.utils |
 | `app/test_*.py` | `tests/` | (standalone) |
-| `app/query_demo.py` | `scripts/query_demo.py` | (standalone) |
+| `app/query_demo.py` | `tests/query_demo.py` | (standalone) |
 
 ### Alte Verzeichnisse (gelöscht)
 
-- ✅ `app/` - Core Module in `src/rag_csv/` reorganisiert
-- ✅ `bin/` - Config Module in `src/rag_csv/config/` reorganisiert
-- ✅ `generator/` - Generator Module in `src/rag_csv/generator/` reorganisiert
-- ✅ `benchmark/` - Benchmark Module in `src/rag_csv/benchmark/` reorganisiert
-- ✅ `metrics/` - Utils Module in `src/rag_csv/utils/` reorganisiert
+- `app/`
+- `bin/`
+- `generator/`
+- `benchmark/`
+- `metrics/`
+
 
 ## Neue Import-Pfade
 
@@ -144,11 +142,11 @@ rag-generate kb
 rag-generate tickets
 ```
 
-Oder über direktes Python-Skript:
+Alternative Aufrufe über Python-Module:
 
 ```bash
-python scripts/query_demo.py
-python scripts/eval_models.py
+python -m rag_csv.ingest.kb
+python -m rag_csv.ingest.incidents
 ```
 
 ## Modul-Übersicht
@@ -267,7 +265,7 @@ from rag_csv.config.settings import EmbeddingConfig
 Zur Validierung der neuen Struktur:
 
 ```bash
-python test_new_structure.py
+pytest tests/test_new_structure.py
 ```
 
 Dies testet alle wichtigen Imports und Konfigurationen.

@@ -52,6 +52,13 @@ OUTPUT_CSV_PATH=output/generator       # Generator Output
 
 ## .gitignore
 
-Alle Dateien in diesem Verzeichnis sollten in `.gitignore` sein, außer:
-- Diese README.md
-- Beispiel-Dateien (falls vorhanden)
+In diesem Verzeichnis gelten aktuell folgende Ignore-Regeln:
+- `output/**/*.json`
+- `output/**/*.log`
+- `output/**/ollama_calls.csv`
+- `output/metrics/`
+
+Ausnahme:
+- `!output/README.md`
+
+Hinweis: Generische `*.csv`-Regeln werden durch spezielle Ausnahmen (z. B. `!data/**/*.csv`) überschrieben.
