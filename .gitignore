@@ -36,12 +36,10 @@ output/**/ollama_calls.csv
 output/metrics/ 
 !output/README.md
 
-tests/
-docs/
+docs/ignore/
 
 run_*
 
 debug_*
-test_*
 demo_*
 
